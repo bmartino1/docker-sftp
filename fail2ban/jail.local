@@ -24,10 +24,10 @@ dbpurgeage = 7d
 
 # Default ban action (iptables-multiport is fine in Docker)
 banaction = iptables-multiport
-action = %(banaction)s[name=%(__name__)s, port="%(port)s", protocol="%(protocol)s"]
+action = %(banaction)s[name=%(__name__)s, port="22", protocol="tcp"]
 
 [sshd]
 enabled = true
-port = ssh
+port = 22
 filter = sshd
 logpath = /var/log/auth.log
