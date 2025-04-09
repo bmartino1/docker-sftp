@@ -42,6 +42,12 @@ chmod 644 /config/fail2ban/*.conf /config/sshd/*.conf /config/sshd/users.conf
 chmod 644 /config/fail2ban/filter.d/*.conf 2>/dev/null || true
 chmod 600 /config/sshd/keys/*_key 2>/dev/null || true
 
+if grep -q "/var/log/fail2ban.log" /etc/fail2ban/fail2ban.conf; then
+  echo "$(date) [info] Fixing legacy fail2ban.conf paths"
+  sed -i 's|/var/log/fail2ban.log|/config/fail2ban/fail2ban.log|' /etc/fail2ban/fail2ban.conf
+  sed -i 's|/var/lib/fail2ban/fail2ban.sqlite3|/config/fail2ban/fail2ban.sqlite3|' /etc/fail2ban/fail2ban.conf
+fi
+
 # Apply config to active fail2ban system
 cp /config/fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.conf
 cp /config/fail2ban/jail.conf /etc/fail2ban/jail.conf
