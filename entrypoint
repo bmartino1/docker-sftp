@@ -34,6 +34,14 @@ if [[ ! -d /config/fail2ban/filter.d ]]; then
     cp -r /stage/fail2ban/filter.d /config/fail2ban/
 fi
 
+# Fix permissions
+echo "$(date) [info] Setting ownership and permissions on /config"
+chown -R root:root /config/fail2ban /config/sshd
+chmod -R 755 /config
+chmod 644 /config/fail2ban/*.conf /config/sshd/*.conf /config/sshd/users.conf
+chmod 644 /config/fail2ban/filter.d/*.conf 2>/dev/null || true
+chmod 600 /config/sshd/keys/*_key 2>/dev/null || true
+
 # Apply config to active fail2ban system
 cp /config/fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.conf
 cp /config/fail2ban/jail.conf /etc/fail2ban/jail.conf
