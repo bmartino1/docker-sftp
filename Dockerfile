@@ -8,7 +8,21 @@ LABEL description="Upgraded OpenSSH + Fail2Ban on top of MarkusMcNugen SFTP cont
 #MAINTAINER MarkusMcNugen
 # Forked from atmoz for unRAID
 
+# --- Stage full default config folders in container image for latter ---
+# These are backups of all default configs (used optionally at runtime)
+RUN mkdir -p /stage
+COPY fail2ban/ /stage/fail2ban/
+COPY sshd/ /stage/sshd/
+
+# Persistent volume for external configuration
 VOLUME /config
+
+#First run rebuild
+# This will be overwritten by volume mount:
+RUN rm -f /config/
+RUN mkdir -p /config/fail2ban/filter.d \
+             /config/sshd/keys \
+             /config/userkeys
 
 # Steps done in one RUN layer:
 # - Install packages
@@ -30,28 +44,29 @@ RUN apt-get update && \
     mkdir -p /var/run/sshd /var/run/fail2ban && \
     rm -f /etc/ssh/ssh_host_*key*
 
-# Copy updated and hardened entrypoint logic and default configurations
+# Copy updated and hardened entrypoint logic
 COPY entrypoint /
 RUN chmod +x /entrypoint
 
 # Make sure Fail2Ban directories exist (for mounts + logs)
 RUN mkdir -p /etc/default/sshd \
              /etc/default/f2ban \
-             /config/fail2ban/filter.d \
-             /config/sshd/keys \
-             /config/userkeys \
+             /etc/fail2ban \
+             /etc/fail2ban/filter.d \
+             /etc/ssh \
+             /etc/syslog-ng \
              /var/log \
              /var/run/sshd \
              /var/run/fail2ban
 
-# Copy the Default config for backups (used to restore if /config is empty/missing files)
+# --- Default config files (used if /config is empty) ---
 COPY fail2ban/jail.conf /etc/default/f2ban/jail.conf
 COPY fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.conf
 COPY fail2ban/filter.d/ /etc/fail2ban/filter.d/
 COPY sshd/sshd_config /etc/default/sshd/sshd_config
 COPY syslog-ng/syslog-ng.conf /etc/syslog-ng/syslog-ng.conf
 
-#Open posrt docker uses for ssh / sftp
+#Open port docker uses for ssh / sftp
 EXPOSE 22
 
 #Docker runs script
