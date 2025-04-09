@@ -2,40 +2,9 @@
 set -e
 
 # Ensure runtime folders exist
-mkdir -p /config/fail2ban /config/userkeys /config/sshd/keys
+mkdir -p /config/fail2ban /config/userkeys /config/sshd/keys /config/debug
 
-# If missing, restore fail2ban.conf from stage
-if [[ ! -e /config/fail2ban/fail2ban.conf ]]; then
-    echo "$(date) [warn] fail2ban.conf missing from /config... Restoring from /stage"
-    cp /stage/fail2ban/fail2ban.conf /config/fail2ban/fail2ban.conf
-fi
-
-# If missing, restore jail.local from stage
-if [[ ! -e /config/fail2ban/jail.local ]]; then
-    echo "$(date) [warn] jail.local missing from /config... Restoring from /stage"
-    cp /stage/fail2ban/jail.local /config/fail2ban/jail.local
-fi
-
-# If missing, restore sshd_config from stage
-if [[ ! -e /config/sshd/sshd_config ]]; then
-    echo "$(date) [warn] sshd_config missing from /config... Restoring from /stage"
-    cp /stage/sshd/sshd_config /config/sshd/sshd_config
-fi
-
-# If missing, restore users.conf from stage
-if [[ ! -e /config/sshd/users.conf ]]; then
-    echo "$(date) [warn] users.conf missing from /config... Restoring from /stage"
-    echo "defualt user admin password password change in the user.conf file"
-    cp /stage/sshd/users.conf /config/sshd/users.conf
-fi
-
-# If missing, restore filters
-if [[ ! -d /config/fail2ban/filter.d ]]; then
-    echo "$(date) [warn] filter.d missing from /config... Restoring from /stage"
-    cp -r /stage/fail2ban/filter.d /config/fail2ban/
-fi
-
-# Fix permissions
+# Fix Unraid folder and file permissions
 echo "$(date) [info] Setting ownership and permissions on /config"
 chown -R root:root /config/fail2ban /config/sshd
 chmod -R 755 /config
@@ -43,10 +12,63 @@ chmod 644 /config/fail2ban/*.conf /config/sshd/*.conf /config/sshd/users.conf
 chmod 644 /config/fail2ban/filter.d/*.conf 2>/dev/null || true
 chmod 600 /config/sshd/keys/*_key 2>/dev/null || true
 
-# Apply config to active fail2ban system
+# If missing, restore fail2ban.conf from stage
+if [[ ! -e /config/fail2ban/fail2ban.conf ]]; then
+    echo "$(date) [warn] fail2ban.conf missing from /config... Restoring from /stage"
+    cp /stage/fail2ban/fail2ban.conf /config/fail2ban/fail2ban.conf
+else
+    echo "$(date) [info] Using existing /config/fail2ban/fail2ban.conf"
+fi
+
+# If missing, restore jail.local from stage
+if [[ ! -e /config/fail2ban/jail.local ]]; then
+    echo "$(date) [warn] jail.local missing from /config... Restoring from /stage"
+    cp /stage/fail2ban/jail.local /config/fail2ban/jail.local
+else
+    echo "$(date) [info] Using existing /config/fail2ban/jail.local"
+fi
+
+# If missing, restore filters
+if [[ ! -d /config/fail2ban/filter.d ]]; then
+    echo "$(date) [warn] filter.d missing from /config... Restoring from /stage"
+    cp -r /stage/fail2ban/filter.d /config/fail2ban/
+else
+    echo "$(date) [info] Using existing /config/fail2ban/filter.d"
+fi
+
+# Ensure sshd.conf exists
+if [[ ! -e /config/fail2ban/filter.d/sshd.conf ]]; then
+    echo "$(date) [warn] sshd.conf filter missing... Restoring from /stage"
+    cp /stage/fail2ban/filter.d/sshd.conf /config/fail2ban/filter.d/sshd.conf
+else
+    echo "$(date) [info] Using existing sshd.conf filter"
+fi
+
+# If missing, restore sshd_config from stage
+if [[ ! -e /config/sshd/sshd_config ]]; then
+    echo "$(date) [warn] sshd_config missing from /config... Restoring from /stage"
+    cp /stage/sshd/sshd_config /config/sshd/sshd_config
+else
+    echo "$(date) [info] Using existing /config/sshd/sshd_config"
+fi
+
+# If missing, restore users.conf from stage
+if [[ ! -e /config/sshd/users.conf ]]; then
+    echo "$(date) [warn] users.conf missing from /config... Restoring from /stage"
+    echo "default user admin password password change in the user.conf file"
+    cp /stage/sshd/users.conf /config/sshd/users.conf
+else
+    echo "$(date) [info] Using existing /config/sshd/users.conf"
+fi
+
+# Apply Volume config file to docker system
 cp /config/fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.conf
 cp /config/fail2ban/jail.local /etc/fail2ban/jail.d/jail.local
-cp -r /config/fail2ban/filter.d /etc/fail2ban/
+cp /config/fail2ban/filter.d/sshd.conf /etc/fail2ban/filter.d/sshd.conf
+
+# Debug aid: Copy jail.conf to config
+echo "[DEBUG] Copying default jail.conf to /config/debug"
+cp /etc/fail2ban/jail.conf /config/debug/jail.conf
 
 # Apply sshd config
 cp /config/sshd/sshd_config /etc/ssh/sshd_config
@@ -265,6 +287,22 @@ if [[ -e /var/log/auth.log ]]; then
     > /var/log/auth.log
 fi
 
+# Debug aid: list effective jail and filter files
+echo "[DEBUG] Listing loaded jail config and filter files..."
+ls -l /etc/fail2ban/jail.d/
+ls -l /etc/fail2ban/filter.d/
+
+#Explict Fail2Ban Debug
+fail2ban-client -d >> /config/debug/fail2ban-debug.log 2>&1
+
+#Sanity Check Fail2ban configs
+[[ ! -f /etc/fail2ban/filter.d/sshd.conf ]] && echo "[ERROR] sshd.conf missing from /etc/fail2ban/filter.d/"
+
+if [[ ! -f /etc/fail2ban/jail.d/jail.local || ! -f /etc/fail2ban/filter.d/sshd.conf ]]; then
+    echo "[FATAL] Required Fail2Ban config missing. Exiting."
+    exit 1
+fi
+
 if $startSshd; then
     echo "Executing syslog-ng"
     service syslog-ng start
@@ -283,3 +321,4 @@ else
     echo "Executing $@"
     exec "$@"
 fi
+
