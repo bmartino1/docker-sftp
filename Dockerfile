@@ -54,10 +54,9 @@ VOLUME /config
 # --- Default config files preset to run withount /config volume ---
 COPY syslog-ng/syslog-ng.conf /etc/syslog-ng/syslog-ng.conf
 COPY sshd/sshd_config /etc/default/sshd/sshd_config
-#Entry point will do this... issues with fail2ban configs... we want package maintainers first!
-#COPY fail2ban/jail.local /etc/fail2ban/jail.d/jail.local
-#COPY fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.conf
-#
+#Fail2ban via .local files 
+COPY fail2ban/jail.local /etc/fail2ban/jail.d/jail.local
+COPY fail2ban/fail2ban.local /etc/fail2ban/fail2ban.local
 
 #Debug
 #RUN cp -r /etc/fail2ban /stage/debug/
