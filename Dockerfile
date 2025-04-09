@@ -7,6 +7,7 @@ LABEL description="Upgraded OpenSSH + Fail2Ban on top of Phusion BaseImage"
 # --- Stage full default config folders in container image for later use ---
 # These are backups of all default configs (used optionally at runtime)
 RUN mkdir -p /stage
+RUN mkdir -p /stage/debug/fail2ban
 COPY fail2ban/ /stage/fail2ban/
 COPY sshd/ /stage/sshd/
 COPY syslog-ng/ /stage/syslog-ng/
@@ -50,12 +51,6 @@ RUN chmod +x /entrypoint
 # Persistent volume for external configuration
 VOLUME /config
 
-# First run rebuild - this will be overwritten by volume mount:
-RUN mkdir -p /config/fail2ban/filter.d \
-             /config/sshd/keys \
-             /config/userkeys
-#Testing configs as not realy needed entrypoint script hasn't run yet to make the files/volume mounts... and service edits....
-
 # --- Default config files preset to run withount /config volume ---
 COPY syslog-ng/syslog-ng.conf /etc/syslog-ng/syslog-ng.conf
 COPY sshd/sshd_config /etc/default/sshd/sshd_config
@@ -65,6 +60,14 @@ COPY sshd/sshd_config /etc/default/sshd/sshd_config
 #COPY fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.conf
 #COPY fail2ban/filter.d/ /etc/fail2ban/filter.d/
 #COPY sshd/users.conf /stage/sshd/users.conf
+
+#Debug
+RUN cp -r /etc/fail2ban /stage/debug/fail2ban
+#Versioning
+RUN echo -n "Fail2Ban: " > /stage/debug/versions.txt && \
+    fail2ban-client -V | head -n1 >> /stage/debug/versions.txt && \
+    echo -n "OpenSSH: " >> /stage/debug/versions.txt && \
+    ssh -V 2>> /stage/debug/versions.txt
 
 # Open port for SSH / SFTP
 EXPOSE 22
