@@ -30,24 +30,25 @@ fi
 if [[ ! -d /config/fail2ban/filter.d ]]; then
     echo "$(date) [warn] filter.d missing from /config... Restoring from /stage"
     cp -r /stage/fail2ban/filter.d /config/fail2ban/
-else
-    echo "$(date) [info] Using existing /config/fail2ban/filter.d"
 fi
 
-# Ensure sshd.conf exists
+# Ensure sshd.conf exists in filter.d, log appropriately
+# If missing, restore sshd_config from stage debug
+if [[ ! -e /etc/fail2ban/filter.d/sshd.conf ]]; then
+    echo "$(date) [warn] sshd_config found during Debug"
+    cp /etc/fail2ban/filter.d/sshd.conf /config/debug/sshd.conf
+    echo "dockerfile build may have already replaced"
+else
+    echo "$(date) [info] Using existing filter.d directory..."
+    cp /config/fail2ban/filter.d/sshd.conf /etc/fail2ban/filter.d/sshd.conf
+fi
+
+# Ensure sshd.conf exists (Openssh server)
 if [[ ! -e /config/fail2ban/filter.d/sshd.conf ]]; then
     echo "$(date) [warn] sshd.conf filter missing... Restoring from /stage"
     cp /stage/fail2ban/filter.d/sshd.conf /config/fail2ban/filter.d/sshd.conf
 else
     echo "$(date) [info] Using existing sshd.conf filter"
-fi
-
-# If missing, restore sshd_config from stage
-if [[ ! -e /config/sshd/sshd_config ]]; then
-    echo "$(date) [warn] sshd_config missing from /config... Restoring from /stage"
-    cp /stage/sshd/sshd_config /config/sshd/sshd_config
-else
-    echo "$(date) [info] Using existing /config/sshd/sshd_config"
 fi
 
 # If missing, restore users.conf from stage
@@ -74,7 +75,6 @@ cp /config/sshd/sshd_config /etc/ssh/sshd_config
 # Apply Volume config file to docker system
 cp /config/fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.conf
 cp /config/fail2ban/jail.local /etc/fail2ban/jail.d/jail.local
-cp /config/fail2ban/filter.d/sshd.conf /etc/fail2ban/filter.d/sshd.conf
 
 # Create host keys only on first docker run/image pull
 if [ ! -f "$userConfFinalPath" ]; then
