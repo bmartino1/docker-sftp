@@ -7,7 +7,7 @@ LABEL description="Upgraded OpenSSH + Fail2Ban on top of Phusion BaseImage"
 # --- Stage full default config folders in container image for later use ---
 # These are backups of all default configs (used optionally at runtime)
 RUN mkdir -p /stage
-RUN mkdir -p /stage/debug/fail2ban
+RUN mkdir -p /stage/debug/
 COPY fail2ban/ /stage/fail2ban/
 COPY sshd/ /stage/sshd/
 COPY syslog-ng/ /stage/syslog-ng/
@@ -54,15 +54,15 @@ VOLUME /config
 # --- Default config files preset to run withount /config volume ---
 COPY syslog-ng/syslog-ng.conf /etc/syslog-ng/syslog-ng.conf
 COPY sshd/sshd_config /etc/default/sshd/sshd_config
-
 #Entry point will do this... issues with fail2ban configs... we want package maintainers first!
 #COPY fail2ban/jail.local /etc/fail2ban/jail.d/jail.local
 #COPY fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.conf
-#COPY fail2ban/filter.d/ /etc/fail2ban/filter.d/
-#COPY sshd/users.conf /stage/sshd/users.conf
+#
 
 #Debug
-RUN cp -r /etc/fail2ban /stage/debug/fail2ban
+#RUN cp -r /etc/fail2ban /stage/debug/
+#Check Fail2ban Repo Configs...
+
 #Versioning
 RUN echo -n "Fail2Ban: " > /stage/debug/versions.txt && \
     fail2ban-client -V | head -n1 >> /stage/debug/versions.txt && \
