@@ -1,11 +1,17 @@
 [DEFAULT]
 # List of IPs or networks to ignore (internal Docker/unRAID ranges)
-ignoreip = 127.0.0.1/8 172.16.0.0/12 192.168.0.0/16
+ignoreip = 127.0.0.1/8
+#172.16.0.0/12 192.168.0.0/16 internal docker bridge and private router lan traffic...
 
-# Ban timing
-bantime  = 86400        # 24 hours
-findtime = 600          # 10 minutes window
-maxretry = 3            # Max 3 failures before ban
+# Ban timing...
+# 24 hours
+bantime  = 86400
+
+# 10 minutes window
+findtime = 600
+
+# Max 3 failures before ban
+maxretry = 3
 
 # Log settings
 backend = polling
