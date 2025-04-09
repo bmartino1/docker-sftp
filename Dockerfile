@@ -1,46 +1,35 @@
-FROM markusmcnugen/sftp:latest
+FROM phusion/baseimage:noble-1.0.1
 
 LABEL maintainer=bmartino
-LABEL description="Upgraded OpenSSH + Fail2Ban on top of MarkusMcNugen SFTP container with full config support"
+LABEL description="Upgraded OpenSSH + Fail2Ban on top of Phusion BaseImage with full config support"
 
-#Orginal Fork
-#FROM phusion/baseimage:master-amd64
-#MAINTAINER MarkusMcNugen
-# Forked from atmoz for unRAID
+# Forked from markusmcnugen/sftp and atmoz for unRAID
 
-# --- Stage full default config folders in container image for latter ---
+# --- Stage full default config folders in container image for later use ---
 # These are backups of all default configs (used optionally at runtime)
 RUN mkdir -p /stage
 COPY fail2ban/ /stage/fail2ban/
 COPY sshd/ /stage/sshd/
 COPY syslog-ng/ /stage/syslog-ng/
-#Fix file permission
-RUN chmod 777 -R /stage/
-RUN chown nobody:users -R /stage/
-
+# Fix file permissions
+RUN chmod 777 -R /stage/ && \
+    chown nobody:users -R /stage/
 
 # Persistent volume for external configuration
 VOLUME /config
 
-#First run rebuild
-# This will be overwritten by volume mount:
-#Build Cleanup when needed...
-#RUN rm -f /config/
+# First run rebuild - this will be overwritten by volume mount:
 RUN mkdir -p /config/fail2ban/filter.d \
              /config/sshd/keys \
              /config/userkeys
 
-# Steps done in one RUN layer:
-# - Install packages
+# Install updated packages and setup
 # - OpenSSH needs /var/run/sshd to run
-# - Remove generic host keys, entrypoint generates unique keys
-# Install updated versions of openssh-server, fail2ban, and iptables
-RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://us.archive.ubuntu.com/ubuntu/|g' /etc/apt/sources.list && \
-    sed -i 's|http://security.ubuntu.com/ubuntu|http://us.archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list && \
-    apt-get update && \
-    apt-get upgrade -y && \
+# - Remove generic host keys; entrypoint generates unique keys
+RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         openssh-server \
+        openssh-sftp-server \
         fail2ban \
         iptables \
         syslog-ng \
@@ -53,10 +42,10 @@ RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://us.archive.ubuntu.com/ubu
     rm -f /etc/ssh/ssh_host_*key*
 
 # Copy updated and hardened entrypoint logic
-COPY entrypoint /
+COPY entrypoint /entrypoint
 RUN chmod +x /entrypoint
 
-# Make sure Fail2Ban directories exist (for mounts + logs)
+# Ensure all runtime directories exist (for mounts, logs, and service compatibility)
 RUN mkdir -p /etc/default/sshd \
              /etc/default/f2ban \
              /etc/fail2ban \
@@ -75,8 +64,8 @@ COPY sshd/sshd_config /etc/default/sshd/sshd_config
 COPY sshd/users.conf /stage/sshd/users.conf
 COPY syslog-ng/syslog-ng.conf /etc/syslog-ng/syslog-ng.conf
 
-#Open port docker uses for ssh / sftp
+# Open port for SSH / SFTP
 EXPOSE 22
 
-#Docker runs script
+# Docker runs script
 ENTRYPOINT ["/entrypoint"]
