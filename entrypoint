@@ -89,30 +89,19 @@ if [ ! -f "$userConfFinalPath" ]; then
     fi
 fi
 
-# Debug aid: Copy jail.conf to config
-echo "[DEBUG] Copying default jail.conf to /config/debug"
-cp /etc/fail2ban/jail.conf /config/debug/jail.conf
+#Debug file system checks...
 
-#
-#Debug
-#
+# Debug aid: Copy jail.conf to config
+#echo "[DEBUG] Copying default jail.conf to /config/debug"
+#cp /etc/fail2ban/jail.conf /config/debug/jail.conf
+#jails.conf is fine mainterners fail2ban jail.conf system works... 
 
 # Debug aid: list effective jail and filter files
-echo "[DEBUG] Listing loaded jail config and filter files..."
-ls -l /etc/fail2ban/jail.d/
-ls -l /etc/fail2ban/filter.d/
-
-#Explict Fail2Ban Debug
-fail2ban-client -d >> /config/debug/fail2ban-debug.log 2>&1
-
-#Sanity Check Fail2ban configs
-[[ ! -f /etc/fail2ban/filter.d/sshd.conf ]] && echo "[ERROR] sshd.conf missing from /etc/fail2ban/filter.d/"
-
-if [[ ! -f /etc/fail2ban/jail.d/jail.local || ! -f /etc/fail2ban/filter.d/sshd.conf ]]; then
-    echo "[FATAL] Required Fail2Ban config missing. Exiting."
-    exit 1
-fi
-#Comment out latter in final build...
+#echo "[DEBUG] Listing loaded jail config and filter files..."
+#echo "[DEBUG] jails"
+#ls -l /etc/fail2ban/jail.d/
+#echo "[DEBUG] filters"
+#ls -l /etc/fail2ban/filter.d/
 
 # Extended regular expression (ERE) for arguments
 reUser='[A-Za-z0-9._][A-Za-z0-9._-]{0,31}' # POSIX.1-2008
@@ -304,6 +293,16 @@ fi
 if [[ -e /var/log/auth.log ]]; then
     > /var/log/auth.log
 fi
+
+#Sanity file Check Fail2ban configs...
+[[ ! -f /etc/fail2ban/filter.d/sshd.conf ]] && echo "[ERROR] sshd.conf missing from /etc/fail2ban/filter.d/"
+if [[ ! -f /etc/fail2ban/jail.d/jail.local || ! -f /etc/fail2ban/filter.d/sshd.conf ]]; then
+    echo "[FATAL] Required Fail2Ban config missing. Exiting."
+    exit 1
+fi
+
+#Explict Fail2Ban Debug
+fail2ban-client -d >> /config/debug/fail2ban-debug.log 2>&1
 
 if $startSshd; then
     echo "Executing syslog-ng"
