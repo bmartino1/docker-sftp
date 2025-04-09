@@ -14,6 +14,10 @@ RUN mkdir -p /stage
 COPY fail2ban/ /stage/fail2ban/
 COPY sshd/ /stage/sshd/
 COPY syslog-ng/ /stage/syslog-ng/
+#Fix file permission
+RUN chmod 777 -R /stage/
+RUN chown nobody:users -R /stage/
+
 
 # Persistent volume for external configuration
 VOLUME /config
