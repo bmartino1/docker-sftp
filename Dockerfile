@@ -57,7 +57,7 @@ RUN mkdir -p /etc/default/sshd \
              /var/run/fail2ban
 
 # --- Default config files (used if /config is empty) ---
-COPY fail2ban/jail.conf /etc/default/f2ban/jail.conf
+COPY fail2ban/jail.local /etc/fail2ban/jail.d/jail.local
 COPY fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.conf
 COPY fail2ban/filter.d/ /etc/fail2ban/filter.d/
 COPY sshd/sshd_config /etc/default/sshd/sshd_config
