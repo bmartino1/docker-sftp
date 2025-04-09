@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+#Docker script variable
+userConfPath="/config/sshd/users.conf"
+userConfPathLegacy="/etc/sftp-users.conf"
+userConfFinalPath="/var/run/sftp/users.conf"
+# Variables and Paths latter
+
 # Ensure runtime folders exist
 mkdir -p /config/fail2ban /config/userkeys /config/sshd/keys /config/debug
 
@@ -61,28 +67,58 @@ else
     echo "$(date) [info] Using existing /config/sshd/users.conf"
 fi
 
+#Delete after testing:
+# Replace placeholders in fail2ban.conf
+#sed -i 's|^logtarget = /var/log/fail2ban.log|logtarget = /config/fail2ban/fail2ban.log|' /etc/fail2ban/fail2ban.conf
+#sed -i 's|^dbfile = /var/lib/fail2ban/fail2ban.sqlite3|dbfile = /config/fail2ban/fail2ban.sqlite3|' /etc/fail2ban/fail2ban.conf
+#Should be aprt of the fail2ban.conf ... we will copy from config folder...
+# end delete
+
+# Apply sshd config
+cp /config/sshd/sshd_config /etc/ssh/sshd_config
+
 # Apply Volume config file to docker system
 cp /config/fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.conf
 cp /config/fail2ban/jail.local /etc/fail2ban/jail.d/jail.local
 cp /config/fail2ban/filter.d/sshd.conf /etc/fail2ban/filter.d/sshd.conf
 
+# Create host keys only on first docker run/image pull
+if [ ! -f "$userConfFinalPath" ]; then
+    # Generate unique ssh keys for this container, if needed
+    if [ ! -f /config/sshd/keys/ssh_host_ed25519_key ]; then
+        echo "Generating sshd key..."
+        ssh-keygen -t ed25519 -f /config/sshd/keys/ssh_host_ed25519_key -N ''
+    fi
+    if [ ! -f /config/sshd/keys/ssh_host_rsa_key ]; then
+        echo "Generating sshd rsa key..."
+        ssh-keygen -t rsa -b 4096 -f /config/sshd/keys/ssh_host_rsa_key -N ''
+    fi
+fi
+
 # Debug aid: Copy jail.conf to config
 echo "[DEBUG] Copying default jail.conf to /config/debug"
 cp /etc/fail2ban/jail.conf /config/debug/jail.conf
 
-# Apply sshd config
-cp /config/sshd/sshd_config /etc/ssh/sshd_config
+#
+#Debug
+#
 
-# Replace placeholders in fail2ban.conf
-sed -i 's|^logtarget = /var/log/fail2ban.log|logtarget = /config/fail2ban/fail2ban.log|' /etc/fail2ban/fail2ban.conf
-sed -i 's|^dbfile = /var/lib/fail2ban/fail2ban.sqlite3|dbfile = /config/fail2ban/fail2ban.sqlite3|' /etc/fail2ban/fail2ban.conf
+# Debug aid: list effective jail and filter files
+echo "[DEBUG] Listing loaded jail config and filter files..."
+ls -l /etc/fail2ban/jail.d/
+ls -l /etc/fail2ban/filter.d/
 
-# [Rest of the original logic continues below unchanged]
-# (Paste everything from your original entrypoint script starting from "# Paths" onward...)
-# Paths
-userConfPath="/config/sshd/users.conf"
-userConfPathLegacy="/etc/sftp-users.conf"
-userConfFinalPath="/var/run/sftp/users.conf"
+#Explict Fail2Ban Debug
+fail2ban-client -d >> /config/debug/fail2ban-debug.log 2>&1
+
+#Sanity Check Fail2ban configs
+[[ ! -f /etc/fail2ban/filter.d/sshd.conf ]] && echo "[ERROR] sshd.conf missing from /etc/fail2ban/filter.d/"
+
+if [[ ! -f /etc/fail2ban/jail.d/jail.local || ! -f /etc/fail2ban/filter.d/sshd.conf ]]; then
+    echo "[FATAL] Required Fail2Ban config missing. Exiting."
+    exit 1
+fi
+#Comment out latter in final build...
 
 # Extended regular expression (ERE) for arguments
 reUser='[A-Za-z0-9._][A-Za-z0-9._-]{0,31}' # POSIX.1-2008
@@ -201,6 +237,15 @@ function createUser() {
     fi
 }
 
+echo "Checking for new users..."
+mkdir -p "$(dirname $userConfFinalPath)"
+
+# Append mounted config to final config
+if [ -f "$userConfPath" ]; then
+    cat "$userConfPath" | grep -v -E "$reArgSkip" > "$userConfFinalPath"
+fi
+
+#Legacy Code -- starts ssh and fail2ban
 # Allow running other programs, e.g. bash
 if [[ -z "$1" || "$1" =~ $reArgsMaybe ]]; then
     startSshd=true
@@ -212,27 +257,6 @@ fi
 if [ ! -f "$userConfPath" -a -f "$userConfPathLegacy" ]; then
     mkdir -p "$(dirname $userConfPath)"
     ln -s "$userConfPathLegacy" "$userConfPath"
-fi
-
-# Create host keys only on first run
-if [ ! -f "$userConfFinalPath" ]; then
-    # Generate unique ssh keys for this container, if needed
-    if [ ! -f /config/sshd/keys/ssh_host_ed25519_key ]; then
-        echo "Generating sshd key..."
-        ssh-keygen -t ed25519 -f /config/sshd/keys/ssh_host_ed25519_key -N ''
-    fi
-    if [ ! -f /config/sshd/keys/ssh_host_rsa_key ]; then
-        echo "Generating sshd rsa key..."
-        ssh-keygen -t rsa -b 4096 -f /config/sshd/keys/ssh_host_rsa_key -N ''
-    fi
-fi
-
-echo "Checking for new users..."
-mkdir -p "$(dirname $userConfFinalPath)"
-
-# Append mounted config to final config
-if [ -f "$userConfPath" ]; then
-    cat "$userConfPath" | grep -v -E "$reArgSkip" > "$userConfFinalPath"
 fi
 
 if $startSshd; then
@@ -287,22 +311,6 @@ if [[ -e /var/log/auth.log ]]; then
     > /var/log/auth.log
 fi
 
-# Debug aid: list effective jail and filter files
-echo "[DEBUG] Listing loaded jail config and filter files..."
-ls -l /etc/fail2ban/jail.d/
-ls -l /etc/fail2ban/filter.d/
-
-#Explict Fail2Ban Debug
-fail2ban-client -d >> /config/debug/fail2ban-debug.log 2>&1
-
-#Sanity Check Fail2ban configs
-[[ ! -f /etc/fail2ban/filter.d/sshd.conf ]] && echo "[ERROR] sshd.conf missing from /etc/fail2ban/filter.d/"
-
-if [[ ! -f /etc/fail2ban/jail.d/jail.local || ! -f /etc/fail2ban/filter.d/sshd.conf ]]; then
-    echo "[FATAL] Required Fail2Ban config missing. Exiting."
-    exit 1
-fi
-
 if $startSshd; then
     echo "Executing syslog-ng"
     service syslog-ng start
@@ -321,4 +329,3 @@ else
     echo "Executing $@"
     exec "$@"
 fi
-
