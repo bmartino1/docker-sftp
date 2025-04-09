@@ -1,10 +1,11 @@
 FROM phusion/baseimage:noble-1.0.1
+#Ubuntu based docker image
 
 LABEL maintainer=bmartino
 LABEL description="Upgraded OpenSSH + Fail2Ban on top of Phusion BaseImage"
 # a Updated ubuntu docker image Forked from markusmcnugen/sftp forekd from atmoz for unRAID
 
-# --- Stage full default config folders in container image for later use ---
+# --- Stage full default config folders in container image for entrypoint script ---
 # These are backups of all default configs (used optionally at runtime)
 RUN mkdir -p /stage
 RUN mkdir -p /stage/debug/
@@ -44,12 +45,9 @@ RUN apt-get update && \
     mkdir -p /var/run/sshd /var/run/fail2ban && \
     rm -f /etc/ssh/ssh_host_*key*
 
-# Copy updated and hardened entrypoint logic
+# Copy entrypoint logic that runs the application in the docker
 COPY entrypoint /entrypoint
 RUN chmod +x /entrypoint
-
-# Persistent volume for external configuration
-VOLUME /config
 
 # --- Default config files preset to run withount /config volume ---
 COPY syslog-ng/syslog-ng.conf /etc/syslog-ng/syslog-ng.conf
@@ -58,15 +56,29 @@ COPY sshd/sshd_config /etc/default/sshd/sshd_config
 COPY fail2ban/jail.local /etc/fail2ban/jail.d/jail.local
 COPY fail2ban/fail2ban.local /etc/fail2ban/fail2ban.local
 
-#Debug
+#fix permission of files coppied
+# Set proper ownership and permissions on config files
+RUN chown -R root:root /etc/fail2ban /etc/default/sshd /etc/syslog-ng && \
+    chmod 644 /etc/fail2ban/*.local /etc/fail2ban/jail.d/*.local && \
+    chmod 644 /etc/default/sshd/sshd_config && \
+    chmod 644 /etc/syslog-ng/syslog-ng.conf
+
+#Debug Build
 #RUN cp -r /etc/fail2ban /stage/debug/
-#Check Fail2ban Repo Configs...
+
+#Check Fail2ban Repo Configs after build host commands...
+# docker run -it --entrypoint /bin/bash dockerbuilt name and tag...
+#Check files and settings...
+# cd /stage/debug
 
 #Versioning
 RUN echo -n "Fail2Ban: " > /stage/debug/versions.txt && \
     fail2ban-client -V | head -n1 >> /stage/debug/versions.txt && \
     echo -n "OpenSSH: " >> /stage/debug/versions.txt && \
     ssh -V 2>> /stage/debug/versions.txt
+
+# Persistent volume for external configuration
+VOLUME /config
 
 # Open port for SSH / SFTP
 EXPOSE 22
