@@ -276,3 +276,7 @@ else
     echo "Executing $@"
     exec "$@"
 fi
+
+#To test only
+#echo "DEBUG MODE: Sleeping..."
+#sleep infinity
