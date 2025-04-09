@@ -5,7 +5,7 @@ ignoreip = 127.0.0.1/8 172.16.0.0/12 192.168.0.0/16
 # Ban timing
 bantime  = 86400        # 24 hours
 findtime = 600          # 10 minutes window
-maxretry = 3            # max 3 failures before ban
+maxretry = 3            # Max 3 failures before ban
 
 # Log settings
 backend = polling
@@ -19,11 +19,6 @@ dbpurgeage = 7d
 # Default ban action (iptables-multiport is fine in Docker)
 banaction = iptables-multiport
 action = %(banaction)s[name=%(__name__)s, port="%(port)s", protocol="%(protocol)s"]
-
-# Email notifications are disabled (no MTA in Docker)
-destemail = root@localhost
-sender = root@localhost
-mta = sendmail
 
 [sshd]
 enabled = true
