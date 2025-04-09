@@ -1,6 +1,11 @@
-as of
+as of 4/9/25
 
 Version runnign in docker
-openssh
-fail2ban
-syslong-ng
+openssh: openssh 1:9.6p1-3ubuntu13.9
+https://launchpad.net/ubuntu/noble/+package/openssh-server
+
+fail2ban: fail2ban 1.0.2-3ubuntu0.1
+https://launchpad.net/ubuntu/noble/+package/fail2ban
+
+syslong-ng: syslog-ng 4.3.1-2build5
+https://answers.launchpad.net/ubuntu/noble/+package/syslog-ng
