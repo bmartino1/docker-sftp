@@ -274,6 +274,9 @@ fi
 #Explict Fail2Ban Debug
 #fail2ban-client -d >> /config/debug/fail2ban-debug.log 2>&1
 
+#Versioning
+cat /stage/debug/versions.txt
+
 if $startSshd; then
     echo "Executing syslog-ng"
     service syslog-ng start
