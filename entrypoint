@@ -22,6 +22,12 @@ if [[ ! -e /config/sshd/sshd_config ]]; then
     cp /stage/sshd/sshd_config /config/sshd/sshd_config
 fi
 
+# If missing, restore users.conf from stage
+if [[ ! -e /config/sshd/users.conf ]]; then
+    echo "$(date) [warn] users.conf missing from /config... Restoring from /stage defualt user admin password password change in the config"
+    cp /stage/sshd/users.conf /config/sshd/users.conf
+fi
+
 # If missing, restore filters
 if [[ ! -d /config/fail2ban/filter.d ]]; then
     echo "$(date) [warn] filter.d missing from /config... Restoring from /stage"
