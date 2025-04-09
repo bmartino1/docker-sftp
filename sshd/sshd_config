@@ -18,7 +18,7 @@ HostKey /config/sshd/keys/ssh_host_rsa_key
 #PubkeyAuthentication yes
 # Enable public key authentication
 #AuthorizedKeysFile %h/.ssh/authorized_keys
-#AuthorizedKeysFile /config/sshd/keys
+#AuthorizedKeysFile /config/userkeys
 
 # Login Grace and Timeouts
 LoginGraceTime 0
