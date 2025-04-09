@@ -19,7 +19,8 @@ VOLUME /config
 
 #First run rebuild
 # This will be overwritten by volume mount:
-RUN rm -f /config/
+#Build Cleanup when needed...
+#RUN rm -f /config/
 RUN mkdir -p /config/fail2ban/filter.d \
              /config/sshd/keys \
              /config/userkeys
@@ -66,6 +67,7 @@ COPY fail2ban/jail.conf /etc/default/f2ban/jail.conf
 COPY fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.conf
 COPY fail2ban/filter.d/ /etc/fail2ban/filter.d/
 COPY sshd/sshd_config /etc/default/sshd/sshd_config
+COPY sshd/users.conf /stage/sshd/users.conf
 COPY syslog-ng/syslog-ng.conf /etc/syslog-ng/syslog-ng.conf
 
 #Open port docker uses for ssh / sftp
