@@ -11,6 +11,15 @@ userConfFinalPath="/var/run/sftp/users.conf"
 mkdir -p /config/fail2ban /config/userkeys /config/sshd/keys
 #mkdir -p /config/fail2ban /config/userkeys /config/sshd/keys /config/debug
 
+# If missing, restore users.conf from stage
+if [[ ! -e /config/sshd/users.conf ]]; then
+    echo "$(date) [warn] users.conf missing from /config... Restoring from /stage"
+    echo "default user admin password password change in the user.conf file"
+    cp /stage/sshd/users.conf /config/sshd/users.conf
+else
+    echo "$(date) [info] Using existing /config/sshd/users.conf"
+fi
+
 # If missing, restore fail2ban.conf from stage
 if [[ ! -e /config/fail2ban/fail2ban.conf ]]; then
     echo "$(date) [warn] fail2ban.conf missing from /config... Restoring from /stage"
@@ -27,21 +36,12 @@ else
     echo "$(date) [info] Using existing /config/fail2ban/jail.local"
 fi
 
-# Ensure sshd.conf exists (Openssh server)
-if [[ ! -e /config/fail2ban/filter.d/sshd.conf ]]; then
-    echo "$(date) [warn] sshd.conf filter missing... Restoring from /stage"
-    cp /stage/fail2ban/filter.d/sshd.conf /config/fail2ban/filter.d/sshd.conf
+# If missing, restore sshd_config from stage
+if [[ ! -e /config/sshd/sshd_config ]]; then
+    echo "$(date) [warn] sshd_config missing from /config... Restoring from /stage"
+    cp /stage/sshd/sshd_config /config/sshd/sshd_config
 else
-    echo "$(date) [info] Using existing sshd.conf filter"
-fi
-
-# If missing, restore users.conf from stage
-if [[ ! -e /config/sshd/users.conf ]]; then
-    echo "$(date) [warn] users.conf missing from /config... Restoring from /stage"
-    echo "default user admin password password change in the user.conf file"
-    cp /stage/sshd/users.conf /config/sshd/users.conf
-else
-    echo "$(date) [info] Using existing /config/sshd/users.conf"
+    echo "$(date) [info] Using existing /config/sshd/sshd_config"
 fi
 
 # Fix Unraid folder and file permissions
@@ -52,10 +52,10 @@ chmod 644 /config/fail2ban/*.conf /config/sshd/*.conf /config/sshd/users.conf
 chmod 600 /config/sshd/keys/*_key 2>/dev/null || true
 chmod 600 /config/userkeys*_key 2>/dev/null || true
 
-# Apply open sshd config form volume mount
+# Apply openssh sshd_config config from volume mount
 cp /config/sshd/sshd_config /etc/ssh/sshd_config
 
-# Apply Volume config file to docker system
+# Apply Fail2Ban Configs from volume mount
 cp /config/fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.conf
 cp /config/fail2ban/jail.local /etc/fail2ban/jail.d/jail.local
 
