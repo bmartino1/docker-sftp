@@ -7,8 +7,9 @@ userConfPathLegacy="/etc/sftp-users.conf"
 userConfFinalPath="/var/run/sftp/users.conf"
 # Variables and Paths latter
 
-# Ensure runtime folders exist
-mkdir -p /config/fail2ban /config/userkeys /config/sshd/keys /config/debug
+# Ensure runtime folders exist for /config volume
+mkdir -p /config/fail2ban /config/userkeys /config/sshd/keys
+#mkdir -p /config/fail2ban /config/userkeys /config/sshd/keys /config/debug
 
 # If missing, restore fail2ban.conf from stage
 if [[ ! -e /config/fail2ban/fail2ban.conf ]]; then
@@ -24,23 +25,6 @@ if [[ ! -e /config/fail2ban/jail.local ]]; then
     cp /stage/fail2ban/jail.local /config/fail2ban/jail.local
 else
     echo "$(date) [info] Using existing /config/fail2ban/jail.local"
-fi
-
-# If missing, restore filters
-if [[ ! -d /config/fail2ban/filter.d ]]; then
-    echo "$(date) [warn] filter.d missing from /config... Restoring from /stage"
-    cp -r /stage/fail2ban/filter.d /config/fail2ban/
-fi
-
-# Ensure sshd.conf exists in filter.d, log appropriately
-# If missing, restore sshd_config from stage debug
-if [[ ! -e /etc/fail2ban/filter.d/sshd.conf ]]; then
-    echo "$(date) [warn] sshd_config found during Debug"
-    cp /etc/fail2ban/filter.d/sshd.conf /config/debug/sshd.conf
-    echo "dockerfile build may have already replaced"
-else
-    echo "$(date) [info] Using existing filter.d directory..."
-    cp /config/fail2ban/filter.d/sshd.conf /etc/fail2ban/filter.d/sshd.conf
 fi
 
 # Ensure sshd.conf exists (Openssh server)
@@ -65,11 +49,10 @@ echo "$(date) [info] Setting ownership and permissions on /config"
 chown -R root:root /config/fail2ban /config/sshd
 chmod -R 755 /config
 chmod 644 /config/fail2ban/*.conf /config/sshd/*.conf /config/sshd/users.conf
-chmod 644 /config/fail2ban/filter.d/*.conf 2>/dev/null || true
 chmod 600 /config/sshd/keys/*_key 2>/dev/null || true
 chmod 600 /config/userkeys*_key 2>/dev/null || true
 
-# Apply sshd config
+# Apply open sshd config form volume mount
 cp /config/sshd/sshd_config /etc/ssh/sshd_config
 
 # Apply Volume config file to docker system
@@ -88,20 +71,6 @@ if [ ! -f "$userConfFinalPath" ]; then
         ssh-keygen -t rsa -b 4096 -f /config/sshd/keys/ssh_host_rsa_key -N ''
     fi
 fi
-
-#Debug file system checks...
-
-# Debug aid: Copy jail.conf to config
-#echo "[DEBUG] Copying default jail.conf to /config/debug"
-#cp /etc/fail2ban/jail.conf /config/debug/jail.conf
-#jails.conf is fine mainterners fail2ban jail.conf system works... 
-
-# Debug aid: list effective jail and filter files
-#echo "[DEBUG] Listing loaded jail config and filter files..."
-#echo "[DEBUG] jails"
-#ls -l /etc/fail2ban/jail.d/
-#echo "[DEBUG] filters"
-#ls -l /etc/fail2ban/filter.d/
 
 # Extended regular expression (ERE) for arguments
 reUser='[A-Za-z0-9._][A-Za-z0-9._-]{0,31}' # POSIX.1-2008
@@ -295,14 +264,15 @@ if [[ -e /var/log/auth.log ]]; then
 fi
 
 #Sanity file Check Fail2ban configs...
-[[ ! -f /etc/fail2ban/filter.d/sshd.conf ]] && echo "[ERROR] sshd.conf missing from /etc/fail2ban/filter.d/"
+[[ ! -f /etc/fail2ban/filter.d/sshd.conf ]] && echo "[ERROR] sshd.conf missing from maintainer"
 if [[ ! -f /etc/fail2ban/jail.d/jail.local || ! -f /etc/fail2ban/filter.d/sshd.conf ]]; then
     echo "[FATAL] Required Fail2Ban config missing. Exiting."
     exit 1
 fi
 
+#Debug
 #Explict Fail2Ban Debug
-fail2ban-client -d >> /config/debug/fail2ban-debug.log 2>&1
+#fail2ban-client -d >> /config/debug/fail2ban-debug.log 2>&1
 
 if $startSshd; then
     echo "Executing syslog-ng"
