@@ -13,6 +13,7 @@ LABEL description="Upgraded OpenSSH + Fail2Ban on top of MarkusMcNugen SFTP cont
 RUN mkdir -p /stage
 COPY fail2ban/ /stage/fail2ban/
 COPY sshd/ /stage/sshd/
+COPY syslog-ng/ /stage/syslog-ng/
 
 # Persistent volume for external configuration
 VOLUME /config
