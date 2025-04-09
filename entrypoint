@@ -10,10 +10,10 @@ if [[ ! -e /config/fail2ban/fail2ban.conf ]]; then
     cp /stage/fail2ban/fail2ban.conf /config/fail2ban/fail2ban.conf
 fi
 
-# If missing, restore jail.conf from stage
-if [[ ! -e /config/fail2ban/jail.conf ]]; then
-    echo "$(date) [warn] jail.conf missing from /config... Restoring from /stage"
-    cp /stage/fail2ban/jail.conf /config/fail2ban/jail.conf
+# If missing, restore jail.local from stage
+if [[ ! -e /config/fail2ban/jail.local ]]; then
+    echo "$(date) [warn] jail.local missing from /config... Restoring from /stage"
+    cp /stage/fail2ban/jail.local /config/fail2ban/jail.local
 fi
 
 # If missing, restore sshd_config from stage
@@ -24,7 +24,8 @@ fi
 
 # If missing, restore users.conf from stage
 if [[ ! -e /config/sshd/users.conf ]]; then
-    echo "$(date) [warn] users.conf missing from /config... Restoring from /stage defualt user admin password password change in the config"
+    echo "$(date) [warn] users.conf missing from /config... Restoring from /stage"
+    echo "defualt user admin password password change in the user.conf file"
     cp /stage/sshd/users.conf /config/sshd/users.conf
 fi
 
@@ -42,15 +43,9 @@ chmod 644 /config/fail2ban/*.conf /config/sshd/*.conf /config/sshd/users.conf
 chmod 644 /config/fail2ban/filter.d/*.conf 2>/dev/null || true
 chmod 600 /config/sshd/keys/*_key 2>/dev/null || true
 
-if grep -q "/var/log/fail2ban.log" /etc/fail2ban/fail2ban.conf; then
-  echo "$(date) [info] Fixing legacy fail2ban.conf paths"
-  sed -i 's|/var/log/fail2ban.log|/config/fail2ban/fail2ban.log|' /etc/fail2ban/fail2ban.conf
-  sed -i 's|/var/lib/fail2ban/fail2ban.sqlite3|/config/fail2ban/fail2ban.sqlite3|' /etc/fail2ban/fail2ban.conf
-fi
-
 # Apply config to active fail2ban system
 cp /config/fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.conf
-cp /config/fail2ban/jail.conf /etc/fail2ban/jail.conf
+cp /config/fail2ban/jail.local /etc/fail2ban/jail.d/jail.local
 cp -r /config/fail2ban/filter.d /etc/fail2ban/
 
 # Apply sshd config
@@ -147,26 +142,26 @@ function createUser() {
         usermod -p "*" $user # disabled password
     fi
 
-		# copy user key, if it exists
-		key_file="/config/userkeys/$user.pub"
-		if [ -f  $key_file ]; then
-			chown $uid /home/$user/.ssh
-			chmod 700 /home/$user/.ssh
+    # copy user key, if it exists
+    key_file="/config/userkeys/$user.pub"
+    if [ -f  $key_file ]; then
+        chown $uid /home/$user/.ssh
+        chmod 700 /home/$user/.ssh
 
-			echo "Copying key for $user"
-			dest_key_file="/home/$user/.ssh/$user.pub"
-			if [ -f $dest_key_file ]; then
-			    rm $dest_key_file
-			fi
-			cp $key_file $dest_key_file
-			chown $uid $dest_key_file
-			chmod 600 $dest_key_file
+        echo "Copying key for $user"
+        dest_key_file="/home/$user/.ssh/$user.pub"
+        if [ -f $dest_key_file ]; then
+            rm $dest_key_file
+        fi
+        cp $key_file $dest_key_file
+        chown $uid $dest_key_file
+        chmod 600 $dest_key_file
 
-			# echo key into authorized_keys and set perms
-			cat $key_file > /home/$user/.ssh/authorized_keys
-			chown $uid /home/$user/.ssh/authorized_keys
-			chmod 600 /home/$user/.ssh/authorized_keys
-		fi
+        # echo key into authorized_keys and set perms
+        cat $key_file > /home/$user/.ssh/authorized_keys
+        chown $uid /home/$user/.ssh/authorized_keys
+        chmod 600 /home/$user/.ssh/authorized_keys
+    fi
 
     # Make sure dirs exists
     if [ -n "$dir" ]; then
@@ -188,7 +183,7 @@ function createUser() {
 if [[ -z "$1" || "$1" =~ $reArgsMaybe ]]; then
     startSshd=true
 else
-	startSshd=false
+    startSshd=false
 fi
 
 # Backward compatibility with legacy config path
@@ -199,14 +194,14 @@ fi
 
 # Create host keys only on first run
 if [ ! -f "$userConfFinalPath" ]; then
-	# Generate unique ssh keys for this container, if needed
+    # Generate unique ssh keys for this container, if needed
     if [ ! -f /config/sshd/keys/ssh_host_ed25519_key ]; then
         echo "Generating sshd key..."
         ssh-keygen -t ed25519 -f /config/sshd/keys/ssh_host_ed25519_key -N ''
     fi
     if [ ! -f /config/sshd/keys/ssh_host_rsa_key ]; then
-          echo "Generating sshd rsa key..."
-          ssh-keygen -t rsa -b 4096 -f /config/sshd/keys/ssh_host_rsa_key -N ''
+        echo "Generating sshd rsa key..."
+        ssh-keygen -t rsa -b 4096 -f /config/sshd/keys/ssh_host_rsa_key -N ''
     fi
 fi
 
@@ -258,18 +253,16 @@ if [ -d /config/sshd/scripts ]; then
     unset f
 fi
 
-#sed -i 's/^backend = auto/backend = systemd/' /etc/fail2ban/jail.conf
-
 if [[ -e /var/run/fail2ban/fail2ban.sock ]]; then
-	rm /var/run/fail2ban/fail2ban.sock
+    rm /var/run/fail2ban/fail2ban.sock
 fi
 
 if [[ -e /var/run/sshd.pid ]]; then
-	rm /var/run/sshd.pid
+    rm /var/run/sshd.pid
 fi
 
 if [[ -e /var/log/auth.log ]]; then
-	> /var/log/auth.log
+    > /var/log/auth.log
 fi
 
 if $startSshd; then
@@ -278,7 +271,7 @@ if $startSshd; then
     echo "Executing sshd"
     service ssh start
     if [ ! -e "/config/fail2ban/fail2ban.log" ]; then
-    	touch "/config/fail2ban/fail2ban.log"
+        touch "/config/fail2ban/fail2ban.log"
     fi
     if [ ! -e "/var/log/auth.log" ]; then
         touch "/var/log/auth.log"
@@ -290,7 +283,3 @@ else
     echo "Executing $@"
     exec "$@"
 fi
-
-#To test only
-#echo "DEBUG MODE: Sleeping..."
-#sleep infinity
