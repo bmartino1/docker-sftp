@@ -30,7 +30,7 @@ User "user" with password "pass" can login with sftp and upload files to a folde
 | `config` | Yes | SSH and Fail2ban config files | `/your/config/path/:/config`|
 
 ## Paths/Files
-There is a /stage fodler that has the orginal configs. The entrypoint script will remake the /config a Volume is not need to run this docker.
+There is a /stage folder that has the orginal configs. The entrypoint script will remake the /config a Volume is not need to run this docker.
 The Entypoint Script and Docker log will have and share issues. Fail2ban and sshd have ben updated and scirpts/configs updated. If you want to make edits to sshd, fail2ban, and jails configurations asl long as they exisitn in /config they will be deployed and used. A major edit was done to use the ubuntu pacakge mainterners files and our eidts to run are now using the .local
 
 Entry Point Script will make any missing files and set correct permission for user keys...
