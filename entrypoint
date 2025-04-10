@@ -1,11 +1,28 @@
 #!/bin/bash
 set -e
 
-#Docker script variable
+###
+# Variables and Paths
+
 userConfPath="/config/sshd/users.conf"
 userConfPathLegacy="/etc/sftp-users.conf"
 userConfFinalPath="/var/run/sftp/users.conf"
-# Variables and Paths latter
+
+# Extended regular expression (ERE) for arguments
+# POSIX.1-2008
+reUser='[A-Za-z0-9._][A-Za-z0-9._-]{0,31}'
+rePass='[^:]{0,255}'
+reUid='[[:digit:]]*'
+reGid='[[:digit:]]*'
+reDir='[^:]*'
+reArgs="^($reUser)(:$rePass)(:e)?(:$reUid)?(:$reGid)?(:$reDir)?$"
+# Smallest indication of attempt to use argument
+reArgsMaybe="^[^:[:space:]]+:.*$"
+# comment or empty line
+reArgSkip='^([[:blank:]]*#.*|[[:blank:]]*)$'
+
+# Variables and Paths
+###
 
 # Ensure runtime folders exist for /config volume
 mkdir -p /config/fail2ban /config/userkeys /config/sshd/keys
@@ -20,12 +37,12 @@ else
     echo "$(date) [info] Using existing /config/sshd/users.conf"
 fi
 
-# If missing, restore fail2ban.conf from stage
-if [[ ! -e /config/fail2ban/fail2ban.conf ]]; then
-    echo "$(date) [warn] fail2ban.conf missing from /config... Restoring from /stage"
-    cp /stage/fail2ban/fail2ban.conf /config/fail2ban/fail2ban.conf
+# If missing, restore fail2ban.local from stage
+if [[ ! -e /config/fail2ban/fail2ban.local ]]; then
+    echo "$(date) [warn] fail2ban.local missing from /config... Restoring from /stage"
+    cp /stage/fail2ban/fail2ban.local /config/fail2ban/fail2ban.local
 else
-    echo "$(date) [info] Using existing /config/fail2ban/fail2ban.conf"
+    echo "$(date) [info] Using existing /config/fail2ban/fail2ban.local"
 fi
 
 # If missing, restore jail.local from stage
@@ -44,7 +61,7 @@ else
     echo "$(date) [info] Using existing /config/sshd/sshd_config"
 fi
 
-# Fix Unraid folder and file permissions
+# Fix /config folder and file permissions for docker services
 echo "$(date) [info] Setting ownership and permissions on /config"
 chown -R root:root /config/fail2ban /config/sshd
 chmod -R 755 /config
@@ -52,11 +69,14 @@ chmod 644 /config/fail2ban/*.conf /config/sshd/*.conf /config/sshd/users.conf
 chmod 600 /config/sshd/keys/*_key 2>/dev/null || true
 chmod 600 /config/userkeys*_key 2>/dev/null || true
 
+#Deply /confg file for dockers services
+
+#Use Volume /config files
 # Apply openssh sshd_config config from volume mount
 cp /config/sshd/sshd_config /etc/ssh/sshd_config
 
 # Apply Fail2Ban Configs from volume mount
-cp /config/fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.conf
+cp /config/fail2ban/fail2ban.local /etc/fail2ban/fail2ban.local
 cp /config/fail2ban/jail.local /etc/fail2ban/jail.d/jail.local
 
 # Create host keys only on first docker run/image pull
@@ -72,15 +92,7 @@ if [ ! -f "$userConfFinalPath" ]; then
     fi
 fi
 
-# Extended regular expression (ERE) for arguments
-reUser='[A-Za-z0-9._][A-Za-z0-9._-]{0,31}' # POSIX.1-2008
-rePass='[^:]{0,255}'
-reUid='[[:digit:]]*'
-reGid='[[:digit:]]*'
-reDir='[^:]*'
-reArgs="^($reUser)(:$rePass)(:e)?(:$reUid)?(:$reGid)?(:$reDir)?$"
-reArgsMaybe="^[^:[:space:]]+:.*$" # Smallest indication of attempt to use argument
-reArgSkip='^([[:blank:]]*#.*|[[:blank:]]*)$' # comment or empty line
+#Main Docker Checks
 
 function log() {
     echo "[entrypoint] $@"
@@ -98,6 +110,19 @@ function validateArg() {
         return 1
     fi
 }
+
+# Source custom scripts, if any
+if [ -d /config/sshd/scripts ]; then
+    for f in /config/sshd/scripts/*; do
+        if [ -x "$f" ]; then
+            log "Running $f ..."
+            $f
+        else
+            log "Could not run $f, because it's missing execute permission (+x)."
+        fi
+    done
+    unset f
+fi
 
 function createUser() {
     log "Parsing user data: \"$@\""
@@ -197,7 +222,6 @@ if [ -f "$userConfPath" ]; then
     cat "$userConfPath" | grep -v -E "$reArgSkip" > "$userConfFinalPath"
 fi
 
-#Legacy Code -- starts ssh and fail2ban
 # Allow running other programs, e.g. bash
 if [[ -z "$1" || "$1" =~ $reArgsMaybe ]]; then
     startSshd=true
@@ -238,19 +262,6 @@ elif $startSshd; then
     exit 3
 fi
 
-# Source custom scripts, if any
-if [ -d /config/sshd/scripts ]; then
-    for f in /config/sshd/scripts/*; do
-        if [ -x "$f" ]; then
-            log "Running $f ..."
-            $f
-        else
-            log "Could not run $f, because it's missing execute permission (+x)."
-        fi
-    done
-    unset f
-fi
-
 if [[ -e /var/run/fail2ban/fail2ban.sock ]]; then
     rm /var/run/fail2ban/fail2ban.sock
 fi
@@ -265,10 +276,7 @@ fi
 
 #Sanity file Check Fail2ban configs...
 [[ ! -f /etc/fail2ban/filter.d/sshd.conf ]] && echo "[ERROR] sshd.conf missing from maintainer"
-if [[ ! -f /etc/fail2ban/jail.d/jail.local || ! -f /etc/fail2ban/filter.d/sshd.conf ]]; then
-    echo "[FATAL] Required Fail2Ban config missing. Exiting."
-    exit 1
-fi
+
 
 #Debug
 #Explict Fail2Ban Debug
