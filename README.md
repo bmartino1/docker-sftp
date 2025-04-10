@@ -31,9 +31,13 @@ User "user" with password "pass" can login with sftp and upload files to a folde
 
 ## Paths/Files
 There is a /stage folder that has the orginal configs. The entrypoint script will remake the /config a Volume is not need to run this docker.
-The Entypoint Script and Docker log will have and share issues. Fail2ban and sshd have ben updated and scirpts/configs updated. If you want to make edits to sshd, fail2ban, and jails configurations asl long as they exisitn in /config they will be deployed and used. A major edit was done to use the ubuntu pacakge mainterners files and our eidts to run are now using the .local
+The Entypoint Script has had some updates and the Docker Log will be able to explain and show issues. 
+Fail2ban and sshd have ben updated and scirpts/configs updated. 
+If you want to make edits to sshd, fail2ban, and jails configurations asl long as they exisit in /config they will be deployed and used. 
+A major edit was done to use the ubuntu package mainterners files and our edits to run are now using the .local file the prefered way...
 
-Entry Point Script will make any missing files and set correct permission for user keys...
+Entrypoint Script will make any missing files and set correct permission for anny add configs and user keys...
+
 ### SSH
 | Path | Required | Function |
 |----------|----------|----------|
@@ -53,7 +57,8 @@ Entry Point Script will make any missing files and set correct permission for us
 *These files are automatically created if they are not present when the container is started
 
 ## Ports
-The OpenSSH server runs by default on port 22. You can forward the container's port 22 to any host port if using the docker bridge network and docker nat. otherwise you will need to edit teh port in sshd_config and jails.local
+The OpenSSH server runs by default on port 22. You can forward the container's port 22 to any host port if using the docker bridge network and docker nat system. 
+Otherwise you will need to edit the port in sshd_config and jails.local
 
 | Port | Proto | Required | Function | Example |
 |----------|----------|----------|----------|----------|
@@ -183,4 +188,3 @@ sftp:
         - "22:22"
     command: user:pass:::upload
 ```
-
