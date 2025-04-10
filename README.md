@@ -30,6 +30,10 @@ User "user" with password "pass" can login with sftp and upload files to a folde
 | `config` | Yes | SSH and Fail2ban config files | `/your/config/path/:/config`|
 
 ## Paths/Files
+There is a /stage fodler that has the orginal configs. The entrypoint script will remake the /config a Volume is not need to run this docker.
+The Entypoint Script and Docker log will have and share issues. Fail2ban and sshd have ben updated and scirpts/configs updated. If you want to make edits to sshd, fail2ban, and jails configurations asl long as they exisitn in /config they will be deployed and used. A major edit was done to use the ubuntu pacakge mainterners files and our eidts to run are now using the .local
+
+Entry Point Script will make any missing files and set correct permission for user keys...
 ### SSH
 | Path | Required | Function |
 |----------|----------|----------|
@@ -42,14 +46,14 @@ User "user" with password "pass" can login with sftp and upload files to a folde
 | Path | Required | Function |
 |----------|----------|----------|
 | `/config/fail2ban` | Yes | Fail2ban config and log directory |
-| `/config/fail2ban/fail2ban.conf` | No* | Fail2Ban config file |
-| `/config/fail2ban/jail.conf` | No* | Fail2Ban jail config file |
+| `/config/fail2ban/fail2ban.local` | No* | Fail2Ban config file |
+| `/config/fail2ban/jail.local` | No* | Fail2Ban jail config file |
 | `/config/fail2ban/fail2ban.sqlite3` | No* | Auto generated Fail2Ban SQLite DB for persistent bans between reboots |
 
 *These files are automatically created if they are not present when the container is started
 
 ## Ports
-The OpenSSH server runs by default on port 22. You can forward the container's port 22 to any host port.
+The OpenSSH server runs by default on port 22. You can forward the container's port 22 to any host port if using the docker bridge network and docker nat. otherwise you will need to edit teh port in sshd_config and jails.local
 
 | Port | Proto | Required | Function | Example |
 |----------|----------|----------|----------|----------|
@@ -82,7 +86,14 @@ user3:xyz:1003:100
 
 Note: If no password is provided for the user, they can only login using an SSH key
 
-## Encrypted password
+Example:
+```
+user:pass:1001:100
+user2:abc:1002:100
+user3::1003:100
+```
+
+## Encrypted password (Untested but should still work)
 Add `:e` behind password to mark it as encrypted. Use single quotes if using a terminal instead of users config file.
 ```
 foo:$1$0G2g0GSt$ewU0t6GXG15.0hWoOX8X9.:e:1001
@@ -163,9 +174,13 @@ This will start a container as described in the "Run container from Docker regis
 ```
 sftp:
     image: bmmbmm01/sftp:latest
+    cap_add:
+        - NET_ADMIN
+        - NET_RAW
     volumes:
         - /host/upload:/home/user/upload
     ports:
         - "22:22"
     command: user:pass:::upload
 ```
+
