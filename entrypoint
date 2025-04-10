@@ -323,14 +323,14 @@ fi
 
 # --- Application Service Version and Updates ---
 #Versioning check from docker build
+echo "[info] Application versions at build step :"
 cat /stage/debug/versions.txt
 
-#WIP - Mby code (curl and dpkg -i) from /tmp to keep openssh and fail2ban up to date...
 # --- Application Updates ---
 UPDATE_SCRIPT="/config/updateapps.sh"
 
 if [ -f "$UPDATE_SCRIPT" ]; then
-    echo "[info] Check for Application updates needed. Executing update script from /config..."
+    echo "[info] Check for Updated Versions... Executing update script from /config..."
     chmod +x "$UPDATE_SCRIPT"
     "$UPDATE_SCRIPT"
 else
