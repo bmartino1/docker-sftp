@@ -7,16 +7,18 @@ Easy to use SFTP ([SSH File Transfer Protocol](https://en.wikipedia.org/wiki/SSH
 
 # Docker Features
 * Base: [phusion/baseimage](https://hub.docker.com/r/phusion/baseimage/)
-* Size: 357MB
-* Hardened default ssh config coutesy of atmoz
+* --Ubuntu Noble Docker image
+* Size: 310MB
+* Hardened default ssh config
 * Fail2ban
 * Optional config volume can be mounted for custom ssh and fail2ban configuration and easily viewing fail2ban log
 
 # Run container from Docker registry
 ```
 docker run \
+    --cap-add=NET_ADMIN --cap-add=NET_RAW
     -v /host/config/path:/config \
-    -p 22:22 -d markusmcnugen/sftp \
+    -p 22:22 -d bmmbmm01/sftp:latest \
     user:pass:::upload
 ```
 User "user" with password "pass" can login with sftp and upload files to a folder called "upload". No mounted directories or custom UID/GID. Later you can inspect the files and use `--volumes-from` to mount them somewhere else.
@@ -58,9 +60,10 @@ The OpenSSH server runs by default on port 22. You can forward the container's p
 Mount the host path to a folder inside the users home directory. Example shows mounting host upload directory to upload directory in user home folder. Alternatively see the *bindmount dirs from another location* below for an example of mapping to a different directory and using scripts to mount dirs inside users home folders.
 ```
 docker run \
+    --cap-add=NET_ADMIN --cap-add=NET_RAW
     -v /host/config/path:/config \
     -v /host/upload:/home/user/upload \
-    -p 22:22 -d markusmcnugen/sftp \
+    -p 22:22 -d bmmbmm01/sftp:latest \
     user:pass:1001
 ```
 
@@ -148,8 +151,9 @@ $ docker build -t sftp .
 ## Run it:
 ```
 $ docker run \
+    --cap-add=NET_ADMIN --cap-add=NET_RAW
     -v /host/config/path:/config \
-    -p 22:22 -d markusmcnugen/sftp \
+    -p 22:22 -d bmmbmm01/sftp:latest \
     user:pass:::upload
 ```
 
@@ -158,7 +162,7 @@ This will start a container as described in the "Run container from Docker regis
 ## Using Docker Compose:
 ```
 sftp:
-    image: markusmcnugen/sftp
+    image: bmmbmm01/sftp:latest
     volumes:
         - /host/upload:/home/user/upload
     ports:
