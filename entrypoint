@@ -1,6 +1,15 @@
 #!/bin/bash
 set -e
 
+#Fix Timezone pull from Docker Enviroment
+# Set timezone based on container variable TZ
+if [ -n "$TZ" ]; then
+    echo "[entrypoint] Setting timezone to $TZ"
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime
+    echo "$TZ" > /etc/timezone
+    dpkg-reconfigure -f noninteractive tzdata
+fi
+
 # Ensure runtime folders exist for /config volume
 mkdir -p /config/fail2ban /config/userkeys /config/sshd/keys
 #mkdir -p /config/fail2ban /config/userkeys /config/sshd/keys /config/debug
