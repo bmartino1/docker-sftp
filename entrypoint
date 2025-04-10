@@ -65,7 +65,7 @@ fi
 echo "$(date) [info] Setting ownership and permissions on /config"
 chown -R root:root /config/fail2ban /config/sshd
 chmod -R 755 /config
-chmod 644 /config/fail2ban/*.conf /config/sshd/*.conf /config/sshd/users.conf
+chmod 644 /config/fail2ban/*.local /config/sshd/*.conf /config/sshd/users.conf
 chmod 600 /config/sshd/keys/*_key 2>/dev/null || true
 chmod 600 /config/userkeys*_key 2>/dev/null || true
 
