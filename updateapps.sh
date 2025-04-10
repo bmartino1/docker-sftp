@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Function to check and update a package
+# Function to check and update a package using curl
 update_package() {
     local package_name=$1
     local current_version=$2
@@ -12,7 +12,7 @@ update_package() {
     if dpkg --compare-versions "$latest_version" gt "$current_version"; then
         echo "[INFO] Newer version detected: $latest_version (current: $current_version)"
         echo "[INFO] Downloading $package_name version $latest_version..."
-        wget -q -P /tmp "$package_url"
+        curl -sSL -o "/tmp/$(basename $package_url)" "$package_url"
         echo "[INFO] Installing $package_name version $latest_version..."
         dpkg -i "/tmp/$(basename $package_url)"
         echo "[INFO] $package_name updated successfully."
