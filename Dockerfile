@@ -12,7 +12,7 @@ RUN mkdir -p /stage/debug/
 COPY fail2ban/ /stage/fail2ban/
 COPY sshd/ /stage/sshd/
 COPY syslog-ng/ /stage/syslog-ng/
-# Fix file permissions
+# Set open file permissions for stage
 RUN chmod 777 -R /stage/ && \
     chown nobody:users -R /stage/
 
@@ -39,11 +39,16 @@ RUN apt-get update && \
         syslog-ng \
         net-tools \
         curl \
+        tzdata \
         iproute2 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir -p /var/run/sshd /var/run/fail2ban && \
     rm -f /etc/ssh/ssh_host_*key*
+
+#Set TZ for date and time fix for Build date and logs.
+ENV TZ=America/Chicago
+RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
 
 # Copy entrypoint logic that runs the application in the docker
 COPY entrypoint /entrypoint
@@ -66,12 +71,13 @@ RUN chown -R root:root /etc/fail2ban /etc/default/sshd /etc/syslog-ng && \
 #Debug Build
 #RUN cp -r /etc/fail2ban /stage/debug/
 
+#Host Debug Check commands...
 #Check Fail2ban Repo Configs after build host commands...
-# docker run -it --entrypoint /bin/bash dockerbuilt name and tag...
+# docker run -it --entrypoint /bin/bash %dockerbuilt name and tag%...
 #Check files and settings...
 # cd /stage/debug
 
-#Versioning
+#Versioning - called in entrypoint to say what version is installed...
 RUN echo -n "Fail2Ban: " > /stage/debug/versions.txt && \
     fail2ban-client -V | head -n1 >> /stage/debug/versions.txt && \
     echo -n "OpenSSH: " >> /stage/debug/versions.txt && \
