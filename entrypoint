@@ -333,9 +333,9 @@ if [ -f "$UPDATE_SCRIPT" ]; then
     echo "[info] Check for Application updates needed. Executing update script from /config..."
     chmod +x "$UPDATE_SCRIPT"
     "$UPDATE_SCRIPT"
-#else
+else
     echo "[info] SKIP- Ignore No updateapps.sh found in /config..."
-#fi
+fi
 
 # --- Start Services ---
 if $startSshd; then
