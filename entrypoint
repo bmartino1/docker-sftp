@@ -325,16 +325,16 @@ fi
 #Versioning check from docker build
 cat /stage/debug/versions.txt
 
-#WIP - Mby code "dpkg -i" from /tmp to keep openssh and fail2ban up to date...
+#WIP - Mby code (curl and dpkg -i) from /tmp to keep openssh and fail2ban up to date...
 # --- Application Updates ---
-#UPDATE_SCRIPT="/config/updateapps.sh"
-#
-#if [ -f "$UPDATE_SCRIPT" ]; then
-#    echo "[info] Application updates needed. Executing update script..."
-#    chmod +x "$UPDATE_SCRIPT"
-#    "$UPDATE_SCRIPT"
+UPDATE_SCRIPT="/config/updateapps.sh"
+
+if [ -f "$UPDATE_SCRIPT" ]; then
+    echo "[info] Check for Application updates needed. Executing update script from /config..."
+    chmod +x "$UPDATE_SCRIPT"
+    "$UPDATE_SCRIPT"
 #else
-#    echo "[info] No application updates required."
+    echo "[info] SKIP- Ignore No updateapps.sh found in /config..."
 #fi
 
 # --- Start Services ---
