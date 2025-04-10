@@ -1,43 +1,72 @@
 #!/bin/bash
 set -e
 
-# Function to check and update a package using curl
+# Function to check and update a package using curl and dpkg
 update_package() {
     local package_name=$1
-    local current_version=$2
-    local latest_version=$3
-    local package_url=$4
+    local package_base_url=$2
 
     echo "[INFO] Checking for updates for $package_name..."
+
+    # Determine the current version installed
+    local current_version
+    case "$package_name" in
+        openssh-server)
+            current_version=$(dpkg-query --showformat='${Version}' --show openssh-server 2>/dev/null || echo "")
+            ;;
+        fail2ban)
+            current_version=$(dpkg-query --showformat='${Version}' --show fail2ban 2>/dev/null || echo "")
+            ;;
+        *)
+            echo "[ERROR] Unsupported package: $package_name"
+            return 1
+            ;;
+    esac
+
     if [[ -z "$current_version" ]]; then
-        echo "[WARN] Could not detect current version for $package_name. Skipping update."
+        echo "[WARN] $package_name is not currently installed."
+    else
+        echo "[INFO] Current version of $package_name: $current_version"
+    fi
+
+    # Fetch the latest version information from the package base URL
+    echo "[INFO] Fetching latest version information for $package_name..."
+    local latest_version_info=$(curl -sSL "$package_base_url" | grep -oP "${package_name}_\K[0-9a-zA-Z.+-]+(?=_amd64\.deb)" | sort -V | tail -n 1)
+
+    if [[ -z "$latest_version_info" ]]; then
+        echo "[ERROR] Could not retrieve latest version for $package_name. Skipping update."
         return
     fi
 
-    if dpkg --compare-versions "$latest_version" gt "$current_version"; then
-        echo "[INFO] Newer version detected: $latest_version (current: $current_version)"
+    local latest_version="${latest_version_info%-*}"
+    local latest_package="${package_name}_${latest_version_info}_amd64.deb"
+    local package_url="${package_base_url}${latest_package}"
+
+    echo "[INFO] Latest version of $package_name available: $latest_version"
+
+    # Compare versions and update if a newer version is available or if not currently installed
+    if [[ -z "$current_version" ]] || dpkg --compare-versions "$latest_version" gt "$current_version"; then
+        echo "[INFO] Newer version detected: $latest_version (current: ${current_version:-none})"
         echo "[INFO] Downloading $package_name version $latest_version..."
-        curl -sSL -o "/tmp/$(basename $package_url)" "$package_url"
+        curl -sSL -o "/tmp/$latest_package" "$package_url"
 
         echo "[INFO] Installing $package_name version $latest_version..."
-        if dpkg -i "/tmp/$(basename $package_url)"; then
+        if dpkg -i "/tmp/$latest_package"; then
             echo "[INFO] $package_name updated successfully."
         else
-            echo "[ERROR] Failed to install $package_name. You may need to manually resolve dependencies. Rebuild at (phusion/baseimage) Debian image - Dockerfile level"
+            echo "[ERROR] Failed to install $package_name. You may need to manually resolve dependencies."
         fi
     else
         echo "[INFO] $package_name is up-to-date (version: $current_version)."
     fi
 }
 
+# Base URLs for the packages
+openssh_base_url="http://archive.ubuntu.com/ubuntu/pool/main/o/openssh/"
+fail2ban_base_url="http://archive.ubuntu.com/ubuntu/pool/main/f/fail2ban/"
+
 # --- Check and update OpenSSH ---
-current_openssh_version=$(ssh -V 2>&1 | awk '{print $1}' | cut -d'_' -f2)
-latest_openssh_version="9.6p1-3ubuntu13.9"
-openssh_package_url="http://archive.ubuntu.com/ubuntu/pool/main/o/openssh/openssh-server_${latest_openssh_version}_amd64.deb"
-update_package "OpenSSH" "$current_openssh_version" "$latest_openssh_version" "$openssh_package_url"
+update_package "openssh-server" "$openssh_base_url"
 
 # --- Check and update Fail2Ban ---
-current_fail2ban_version=$(fail2ban-client -V 2>/dev/null | awk '{print $2}')
-latest_fail2ban_version="1.0.2-3ubuntu0.1"
-fail2ban_package_url="http://archive.ubuntu.com/ubuntu/pool/main/f/fail2ban/fail2ban_${latest_fail2ban_version}_all.deb"
-update_package "Fail2Ban" "$current_fail2ban_version" "$latest_fail2ban_version" "$fail2ban_package_url"
+update_package "fail2ban" "$fail2ban_base_url"
