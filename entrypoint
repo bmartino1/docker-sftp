@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-#Fix Timezone pull from Docker Enviroment
-# Set timezone based on container variable TZ
+# --- Timezone Setup ---
+# Configure system timezone from Docker environment variable TZ
 if [ -n "$TZ" ]; then
     echo "[entrypoint] Setting timezone to $TZ"
     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime
@@ -10,14 +10,16 @@ if [ -n "$TZ" ]; then
     dpkg-reconfigure -f noninteractive tzdata
 fi
 
-# Ensure runtime folders exist for /config volume
+# --- Ensure Required Runtime Folders Exist ---
 mkdir -p /config/fail2ban /config/userkeys /config/sshd/keys
 #mkdir -p /config/fail2ban /config/userkeys /config/sshd/keys /config/debug
+
+# --- Restore Default Configs if Missing in /config from /stage---
 
 # If missing, restore users.conf from stage
 if [[ ! -e /config/sshd/users.conf ]]; then
     echo "$(date) [warn] users.conf missing from /config... Restoring from /stage"
-    echo "default user admin password password change in the user.conf file"
+    echo "default user "admin" password "password" please change in the user.conf file"
     cp /stage/sshd/users.conf /config/sshd/users.conf
 else
     echo "$(date) [info] Using existing /config/sshd/users.conf"
@@ -47,25 +49,21 @@ else
     echo "$(date) [info] Using existing /config/sshd/sshd_config"
 fi
 
-# Fix /config folder and file permissions for docker services
-echo "$(date) [info] Setting ownership and permissions on /config"
+# --- Permissions ---
+# Fix /config more for ssh key files...
+echo "$(date) [info] Setting needed ownership and permissions on /config"
 chown -R root:root /config/fail2ban /config/sshd
 chmod -R 755 /config
 chmod 644 /config/fail2ban/*.local /config/sshd/*.conf /config/sshd/users.conf
 chmod 600 /config/sshd/keys/*_key 2>/dev/null || true
 chmod 600 /config/userkeys*_key 2>/dev/null || true
 
-#Deply /confg file for dockers services
-
-#Use Volume /config files
-# Apply openssh sshd_config config from volume mount
+# --- Apply Active Configs from /config ---
 cp /config/sshd/sshd_config /etc/ssh/sshd_config
-
-# Apply Fail2Ban Configs from volume mount
 cp /config/fail2ban/fail2ban.local /etc/fail2ban/fail2ban.local
 cp /config/fail2ban/jail.local /etc/fail2ban/jail.d/jail.local
 
-# Create host keys only on first docker run/image pull
+# Create ssh keys if missing...
 if [ ! -f "$userConfFinalPath" ]; then
     # Generate unique ssh keys for this container, if needed
     if [ ! -f /config/sshd/keys/ssh_host_ed25519_key ]; then
@@ -78,30 +76,29 @@ if [ ! -f "$userConfFinalPath" ]; then
     fi
 fi
 
-#Main Docker Checks
+#
+#Main Docker Script Checks 
+#
 
-# Replace placeholders in fail2ban.conf
-#sed -i 's|^logtarget = /var/log/fail2ban.log|logtarget = /config/fail2ban/fail2ban.log|' /etc/fail2ban/fail2ban.conf
-#sed -i 's|^dbfile = /var/lib/fail2ban/fail2ban.sqlite3|dbfile = /config/fail2ban/fail2ban.sqlite3|' /etc/fail2ban/fail2ban.conf
-#Not needed anymore - using .local file
-
-# [Rest of the original logic continues below unchanged]
-# (Paste everything from your original entrypoint script starting from "# Paths" onward...)
-# Paths
+# --- Paths & Regex ---
 userConfPath="/config/sshd/users.conf"
 userConfPathLegacy="/etc/sftp-users.conf"
 userConfFinalPath="/var/run/sftp/users.conf"
 
 # Extended regular expression (ERE) for arguments
-reUser='[A-Za-z0-9._][A-Za-z0-9._-]{0,31}' # POSIX.1-2008
+# POSIX.1-2008
+reUser='[A-Za-z0-9._][A-Za-z0-9._-]{0,31}'
 rePass='[^:]{0,255}'
 reUid='[[:digit:]]*'
 reGid='[[:digit:]]*'
 reDir='[^:]*'
 reArgs="^($reUser)(:$rePass)(:e)?(:$reUid)?(:$reGid)?(:$reDir)?$"
-reArgsMaybe="^[^:[:space:]]+:.*$" # Smallest indication of attempt to use argument
-reArgSkip='^([[:blank:]]*#.*|[[:blank:]]*)$' # comment or empty line
+# Smallest indication of attempt to use argument
+reArgsMaybe="^[^:[:space:]]+:.*$"
+# comment or empty line
+reArgSkip='^([[:blank:]]*#.*|[[:blank:]]*)$'
 
+# --- Script Start ---
 function log() {
     echo "[entrypoint] $@"
 }
@@ -209,6 +206,7 @@ function createUser() {
     fi
 }
 
+# --- User Loading ---
 # Allow running other programs, e.g. bash
 if [[ -z "$1" || "$1" =~ $reArgsMaybe ]]; then
     startSshd=true
@@ -222,7 +220,7 @@ if [ ! -f "$userConfPath" -a -f "$userConfPathLegacy" ]; then
     ln -s "$userConfPathLegacy" "$userConfPath"
 fi
 
-# Create host keys only on first run
+# Create host keys only on first run check again...
 if [ ! -f "$userConfFinalPath" ]; then
     # Generate unique ssh keys for this container, if needed
     if [ ! -f /config/sshd/keys/ssh_host_ed25519_key ]; then
@@ -270,6 +268,8 @@ elif $startSshd; then
     exit 3
 fi
 
+#Script more for bind mounts... to add a volume /data and call script to add to sftp for file access...
+#easer to make a /home/%username%/anypathname mount to host path in docker run / compose file
 # Source custom scripts, if any
 if [ -d /config/sshd/scripts ]; then
     for f in /config/sshd/scripts/*; do
@@ -283,6 +283,7 @@ if [ -d /config/sshd/scripts ]; then
     unset f
 fi
 
+# --- Cleanup Old Runtime Files ---
 if [[ -e /var/run/fail2ban/fail2ban.sock ]]; then
     rm /var/run/fail2ban/fail2ban.sock
 fi
@@ -295,16 +296,35 @@ if [[ -e /var/log/auth.log ]]; then
     > /var/log/auth.log
 fi
 
-#Debug
-#Sanity file Checks for Fail2ban configs...
-#[[ ! -f /etc/fail2ban/filter.d/sshd.conf ]] && echo "[ERROR] sshd.conf missing from maintainer"
+# --- Debug Fail2Ban if errors---
+# Sanity checks for required Fail2Ban configuration files
+#log "[debug] Checking Fail2Ban core configuration files..."
 
-#Explict Fail2Ban Debug
+#declare -A f2b_files=(
+#    [fail2ban.conf]="/etc/fail2ban/fail2ban.conf"
+#    [fail2ban.local]="/etc/fail2ban/fail2ban.local"
+#    [jail.conf]="/etc/fail2ban/jail.conf"
+#    [jail.local]="/etc/fail2ban/jail.d/jail.local"
+#    [sshd.conf (filter)]="/etc/fail2ban/filter.d/sshd.conf"
+#)
+#
+#for name in "${!f2b_files[@]}"; do
+#    if [[ ! -f "${f2b_files[$name]}" ]]; then
+#        log "[ERROR] Missing Fail2Ban file: $name (${f2b_files[$name]})"
+#    else
+#        log "[OK] Found: $name"
+#    fi
+#done
+
+#Fail2Ban Application Dry Run Debug
 #fail2ban-client -d >> /config/debug/fail2ban-debug.log 2>&1
 
-#Versioning
+# --- Application Service Version and Updates ---
+#Versioning check from docker build
 cat /stage/debug/versions.txt
+#Mby code "dpkg -i" from /tmp to keep openssh and fail2ban up to date...
 
+# --- Start Services ---
 if $startSshd; then
     echo "Executing syslog-ng"
     service syslog-ng start
@@ -324,4 +344,3 @@ else
     echo "Executing $@"
     exec "$@"
 fi
-
