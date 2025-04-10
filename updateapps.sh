@@ -23,7 +23,7 @@ update_package() {
         if dpkg -i "/tmp/$(basename $package_url)"; then
             echo "[INFO] $package_name updated successfully."
         else
-            echo "[ERROR] Failed to install $package_name. You may need to manually resolve dependencies. Rebuild at image - Docker file"
+            echo "[ERROR] Failed to install $package_name. You may need to manually resolve dependencies. Rebuild at (phusion/baseimage) Debian image - Dockerfile level"
         fi
     else
         echo "[INFO] $package_name is up-to-date (version: $current_version)."
