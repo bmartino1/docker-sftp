@@ -5,9 +5,15 @@ set -e
 # Configure system timezone from Docker environment variable TZ
 if [ -n "$TZ" ]; then
     echo "[entrypoint] Setting timezone to $TZ"
-    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime
-    echo "$TZ" > /etc/timezone
-    dpkg-reconfigure -f noninteractive tzdata
+    if [ -f "/usr/share/zoneinfo/$TZ" ]; then
+        ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime
+        echo "$TZ" > /etc/timezone
+        DEBIAN_FRONTEND=noninteractive dpkg-reconfigure tzdata
+    else
+        echo "[entrypoint] WARNING: Timezone '$TZ' not found in /usr/share/zoneinfo. Skipping timezone configuration."
+    fi
+else
+    echo "[entrypoint] No TZ environment variable set. Skipping timezone configuration."
 fi
 
 # --- Ensure Required Runtime Folders Exist ---
