@@ -65,3 +65,9 @@ update_package "openssh-server" "$openssh_base_url" "$openssh_pattern"
 
 # --- Check and update Fail2Ban ---
 update_package "fail2ban" "$fail2ban_base_url" "$fail2ban_pattern"
+
+
+# --- Output Current Installed Versions ---
+echo "[INFO] versions of current running:"
+echo -n "Fail2Ban: " && fail2ban-client -V | head -n1
+echo -n "OpenSSH: " && ssh -V 2>&1
