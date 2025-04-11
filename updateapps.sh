@@ -30,7 +30,7 @@ update_package() {
     fi
 
     local latest_version
-    latest_version=$(echo "$latest_package_info" | grep -oP '[0-9]+\.[0-9]+[a-zA-Z0-9.+-]*')
+    latest_version=$(echo "$latest_package_info" | grep -oP '[0-9]+(\.[0-9]+)*-[0-9a-zA-Z.+~]*')
 
     local latest_package_url="${package_base_url}${latest_package_info}"
 
@@ -58,7 +58,7 @@ openssh_base_url="http://archive.ubuntu.com/ubuntu/pool/main/o/openssh/"
 openssh_pattern="openssh-server_[0-9]+\.[0-9]+p[0-9]+-[0-9a-zA-Z.+~]*_amd64\.deb"
 
 fail2ban_base_url="http://archive.ubuntu.com/ubuntu/pool/universe/f/fail2ban/"
-fail2ban_pattern="fail2ban_[0-9]+\.[0-9]+-[0-9a-zA-Z.+~]*_all\.deb"
+fail2ban_pattern="fail2ban_[0-9]+(\.[0-9]+)*-[0-9]+_all\.deb"
 
 # --- Check and update OpenSSH ---
 update_package "openssh-server" "$openssh_base_url" "$openssh_pattern"
