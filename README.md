@@ -13,7 +13,7 @@ Easy to use SFTP ([SSH File Transfer Protocol](https://en.wikipedia.org/wiki/SSH
 * Fail2ban
 * Optional config volume can be mounted for custom ssh and fail2ban configuration and easily viewing fail2ban log
 
-# Optional Update script (WIP) Dev testing this ATM
+# Optional Update script
 you can add the updateapps.sh script in the /conf and this should installteh lattes repo from archive.ubuntu.com to install the latttest openssh and fail2ban application.
 (Bleeding edge) Othewise see notes as that is whats pacakged for stable release follwoing release cycles of [phusion/baseimage](https://hub.docker.com/r/phusion/baseimage/)
 
