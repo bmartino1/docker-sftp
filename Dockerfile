@@ -77,11 +77,13 @@ RUN chown -R root:root /etc/fail2ban /etc/default/sshd /etc/syslog-ng && \
 #Check files and settings...
 # cd /stage/debug
 
-#Versioning - called in entrypoint to say what version is installed...
+# Versioning - recorded at image build time for reference at runtime
 RUN echo -n "Fail2Ban: " > /stage/debug/versions.txt && \
-    fail2ban-client -V | head -n1 >> /stage/debug/versions.txt && \
-    echo -n "OpenSSH: " >> /stage/debug/versions.txt && \
-    ssh -V 2>> /stage/debug/versions.txt
+    fail2ban-client -V | head -n1 | sed 's/[^0-9.]*\([0-9.]*\).*/\1/' >> /stage/debug/versions.txt && \
+    echo -n "OpenSSH client: " >> /stage/debug/versions.txt && \
+    ssh -V 2>&1 | grep -oP 'OpenSSH_\K[^ ]+' >> /stage/debug/versions.txt && \
+    echo -n "OpenSSH server: " >> /stage/debug/versions.txt && \
+    dpkg-query -W -f='${Version}\n' openssh-server >> /stage/debug/versions.txt
 
 # Persistent volume for external configuration
 VOLUME /config
