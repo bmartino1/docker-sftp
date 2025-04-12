@@ -68,6 +68,10 @@ RUN chown -R root:root /etc/fail2ban /etc/default/sshd /etc/syslog-ng && \
     chmod 644 /etc/default/sshd/sshd_config && \
     chmod 644 /etc/syslog-ng/syslog-ng.conf
 
+#Autoupdate Feature for latter
+COPY updateapps.sh /stage/updateapps.sh
+RUN chmod +x /stage/updateapps.sh
+
 #Debug Build
 #RUN cp -r /etc/fail2ban /stage/debug/
 
