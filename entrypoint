@@ -327,15 +327,36 @@ echo "[info] Application versions at build step :"
 cat /stage/debug/versions.txt
 
 # --- Application Updates ---
-UPDATE_SCRIPT="/config/updateapps.sh"
+CONFIG_UPDATE_SCRIPT="/config/updateapps.sh"
+DEFAULT_UPDATE_SCRIPT="/stage/updateapps.sh"
 
-if [ -f "$UPDATE_SCRIPT" ]; then
-    echo "[info] Check for Updated Versions... Executing update script from /config..."
-    chmod +x "$UPDATE_SCRIPT"
-    "$UPDATE_SCRIPT"
-else
-    echo "[info] SKIP- Ignore No updateapps.sh found in /config..."
-fi
+case "${AUTO_UPDATE,,}" in
+    true)
+        echo "[info] AUTO_UPDATE=true — Running default update script from /stage..."
+        if [ -f "$DEFAULT_UPDATE_SCRIPT" ]; then
+            chmod +x "$DEFAULT_UPDATE_SCRIPT"
+            "$DEFAULT_UPDATE_SCRIPT"
+        else
+            echo "[warn] Default update script not found at $DEFAULT_UPDATE_SCRIPT. Skipping."
+        fi
+        ;;
+    custom)
+        echo "[info] AUTO_UPDATE=custom — Running user-provided update script from /config..."
+        if [ -f "$CONFIG_UPDATE_SCRIPT" ]; then
+            chmod +x "$CONFIG_UPDATE_SCRIPT"
+            "$CONFIG_UPDATE_SCRIPT"
+        else
+            echo "[warn] Custom update script not found at $CONFIG_UPDATE_SCRIPT. Skipping."
+        fi
+        ;;
+    false | "")
+        echo "[info] AUTO_UPDATE=false — Skipping all update scripts."
+        ;;
+    *)
+        echo "[warn] AUTO_UPDATE set to unknown value: '${AUTO_UPDATE}'. Use 'true', 'false', or 'custom'. Skipping updates."
+        ;;
+esac
+
 
 # --- Start Services ---
 if $startSshd; then
