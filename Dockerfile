@@ -81,6 +81,9 @@ RUN chmod +x /stage/updateapps.sh
 #Check files and settings...
 # cd /stage/debug
 
+#Double check and install lattest verions
+RUN /stage/updateapps.sh
+
 # Versioning - recorded at image build time for reference at runtime
 RUN echo -n "Fail2Ban: " > /stage/debug/versions.txt && \
     fail2ban-client -V | head -n1 | sed 's/[^0-9.]*\([0-9.]*\).*/\1/' >> /stage/debug/versions.txt && \
