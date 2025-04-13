@@ -8,8 +8,8 @@ Easy to use SFTP ([SSH File Transfer Protocol](https://en.wikipedia.org/wiki/SSH
 ---
 
 **More Info:**  
-GitHub: https://github.com/bmartino1/docker-sftp  
-Unraid Forum: https://forums.unraid.net/topic/189050-support-sftp-fail2ban
+Unraid Forum: [https://forums.unraid.net/topic/189050-support-sftp-fail2ban](https://forums.unraid.net/topic/189050-support-sftp-fail2ban)
+Docker Hub: [https://hub.docker.com/r/bmmbmm01/sftp](https://hub.docker.com/r/bmmbmm01/sftp)
 
 # Docker Features
 * Base: [phusion/baseimage](https://hub.docker.com/r/phusion/baseimage/)
