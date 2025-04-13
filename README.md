@@ -3,19 +3,36 @@
 ![alt text][preview]
 
 # SFTP with Fail2ban
-Easy to use SFTP ([SSH File Transfer Protocol](https://en.wikipedia.org/wiki/SSH_File_Transfer_Protocol)) server with [OpenSSH](https://en.wikipedia.org/wiki/OpenSSH) and [Fail2ban](https://www.fail2ban.org/wiki/index.php/Main_Page) installed for extra hardening against brute force attacks. Forked from atmoz/sftp. 
+Easy to use SFTP ([SSH File Transfer Protocol](https://en.wikipedia.org/wiki/SSH_File_Transfer_Protocol)) server with [OpenSSH](https://en.wikipedia.org/wiki/OpenSSH) and [Fail2ban](https://www.fail2ban.org/wiki/index.php/Main_Page) installed for extra hardening against brute force attacks. A Updated Fork of MarkusMcNugen/docker-sftp Orginaly Forked from atmoz/sftp... Due to age of application, It was time for a refresh...
+
+---
+
+**More Info:**  
+GitHub: https://github.com/bmartino1/docker-sftp  
+Unraid Forum: https://forums.unraid.net/topic/189050-support-sftp-fail2ban
 
 # Docker Features
 * Base: [phusion/baseimage](https://hub.docker.com/r/phusion/baseimage/)
 * --Ubuntu Noble Docker image
-* Size: 310MB
+* Size: ~310MB
 * Hardened default ssh config
 * Fail2ban
 * Optional config volume can be mounted for custom ssh and fail2ban configuration and easily viewing fail2ban log
 
 # Optional Update script
-you can add the updateapps.sh script in the /conf and this should installteh lattes repo from archive.ubuntu.com to install the latttest openssh and fail2ban application.
-(Bleeding edge) Othewise see notes as that is whats pacakged for stable release follwoing release cycles of [phusion/baseimage](https://hub.docker.com/r/phusion/baseimage/)
+
+Docker Varaible -e Auto_Update=
+true 	Runs /stage/updateapps.sh if present
+custom	Runs /config/updateapps.sh if present
+false or empty skips updates
+
+```
+cd /config
+wget https://raw.githubusercontent.com/bmartino1/docker-sftp/refs/heads/master/updateapps.sh
+```
+
+you can add the updateapps.sh script in the /conf and this should install the lattes repo from archive.ubuntu.com to install the latest openssh and fail2ban application.
+(Bleeding edge) Otherwise see notes as that is what's packaged for stable release following release cycles of [phusion/baseimage](https://hub.docker.com/r/phusion/baseimage/)
 
 # Run container from Docker registry
 ```
@@ -36,11 +53,11 @@ User "user" with password "pass" can login with sftp and upload files to a folde
 ## Paths/Files
 There is a /stage folder that has the orginal configs. The entrypoint script will remake the /config a Volume is not need to run this docker.
 The Entypoint Script has had some updates and the Docker Log will be able to explain and show issues. 
-Fail2ban and sshd have ben updated and scirpts/configs updated. 
-If you want to make edits to sshd, fail2ban, and jails configurations asl long as they exisit in /config they will be deployed and used. 
-A major edit was done to use the ubuntu package mainterners files and our edits to run are now using the .local file the prefered way...
+Fail2ban and sshd have ben updated and scripts/configs updated. 
+If you want to make edits to sshd, fail2ban, and jails configurations as long as they exist in /config they will be deployed and used. 
+A major edit was done to use the ubuntu package maintainers files and our edits to run are now using the.local file the preferred way...
 
-Entrypoint Script will make any missing files and set correct permission for anny add configs and user keys...
+Entrypoint Script will make any missing files and set correct permission for any add configs and user keys...
 
 ### SSH
 | Path | Required | Function |
@@ -61,8 +78,8 @@ Entrypoint Script will make any missing files and set correct permission for ann
 *These files are automatically created if they are not present when the container is started
 
 ## Ports
-The OpenSSH server runs by default on port 22. You can forward the container's port 22 to any host port if using the docker bridge network and docker nat system. 
-Otherwise you will need to edit the port in sshd_config and jails.local
+The OpenSSH server runs by default on port 22. You can forward the container's port 22 to any host port if using the docker bridge network and docker NAT system. 
+Otherwise, you will need to edit the port in sshd_config and jails.local
 
 | Port | Proto | Required | Function | Example |
 |----------|----------|----------|----------|----------|
@@ -70,7 +87,7 @@ Otherwise you will need to edit the port in sshd_config and jails.local
 
 # Customizing
 ## Sharing a directory from your computer
-Mount the host path to a folder inside the users home directory. Example shows mounting host upload directory to upload directory in user home folder. Alternatively see the *bindmount dirs from another location* below for an example of mapping to a different directory and using scripts to mount dirs inside users home folders.
+Mount the host path to a folder inside the user's home directory. Example shows mounting host upload directory to upload directory in user home folder. Alternatively, see the *bindmount dirs from another location* below for an example of mapping to a different directory and using scripts to mount dirs inside users home folders.
 ```
 docker run \
     --cap-add=NET_ADMIN --cap-add=NET_RAW
@@ -93,7 +110,7 @@ user2:abc:1002:100
 user3:xyz:1003:100
 ```
 
-Note: If no password is provided for the user, they can only login using an SSH key
+Note: If no password is provided for the user, they can only log in using an SSH key example for user3
 
 Example:
 ```
@@ -112,7 +129,7 @@ Tip: you can use [atmoz/makepasswd](https://hub.docker.com/r/atmoz/makepasswd/) 
 `echo -n "your-password" | docker run -i --rm atmoz/makepasswd --crypt-md5 --clearfrom=-`
 
 ## Logging in with SSH keys
-Place public keys with the users name in /config/userkeys directory. The keys must be matched with a users names and a .pub extension. These are copied to `.ssh/authorized_keys` for the user during container start. 
+Place public keys with the user's name in /config/userkeys directory. The keys must be matched with a user's names and a .pub extension. These are copied to `.ssh/authorized_keys` for the user during container start. 
 
 Example:
 ```
@@ -120,7 +137,7 @@ user.pub
 ```
 
 ## Providing your own SSH host key (recommended)
-This container will generate new SSH host keys at first run in /config/sshd/keys. You can place your own sshd keys in this folder and they will be copied to /etc/ssh/ when the container runs.
+This container will generate new SSH host keys at first run in /config/sshd/keys. You can place your own sshd keys in this folder, and they will be copied to /etc/ssh/ when the container runs.
 
 Tip: you can generate your keys with these commands:
 
@@ -134,7 +151,7 @@ Put your programs in `/config/sshd/scripts` and it will automatically run when t
 See next subsection for an example.
 
 ### Bindmount dirs from another location
-If you are using `--volumes-from` or just want to make a custom directory available in user's home directory, you can add a script to `/config/sshd/scripts/` that bindmounts after container starts.
+If you are using `--volumes-from` or just want to make a custom directory available in the user's home directory, you can add a script to `/config/sshd/scripts/` that bindmounts after container starts.
 ```
 #!/bin/bash
 # File mounted as: /config/sshd/scripts/bindmount.sh
