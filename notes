@@ -1,4 +1,4 @@
-as of 4/9/25
+as of 4/12/25
 
 Base docker image:
 phusion/baseimage:noble-1.0.1
@@ -6,13 +6,20 @@ Ubuntu code name Noble
 https://hub.docker.com/r/phusion/baseimage/tags
 
 Version runnign in docker
-openssh: openssh 1:9.6p1-3ubuntu13.9
+openssh: openssh 9.9p1
 https://launchpad.net/ubuntu/noble/+package/openssh-server
 https://archive.ubuntu.com/ubuntu/pool/main/o/openssh/
 
-fail2ban: fail2ban 1.0.2-3ubuntu0.1
+fail2ban: 1.0.2
 https://launchpad.net/ubuntu/noble/+package/fail2ban
 https://archive.ubuntu.com/ubuntu/pool/universe/f/fail2ban/
 
 syslong-ng: syslog-ng 4.3.1-2build5
 https://answers.launchpad.net/ubuntu/noble/+package/syslog-ng
+
+
+Current Image version as seen in docker log
+[INFO] versions of current running:
+Fail2Ban: 1.0.2
+OpenSSH client: 9.9p1
+OpenSSH server: 1:9.9p1-3ubuntu3
