@@ -1,7 +1,7 @@
 as of 4/12/25
 
 Base docker image:
-phusion/baseimage:noble-1.0.1
+phusion/baseimage:noble-1.0.2
 Ubuntu code name Noble
 https://hub.docker.com/r/phusion/baseimage/tags
 
