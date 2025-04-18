@@ -1,0 +1,21 @@
+version: "3"
+services:
+  sftp:
+    container_name: sftp-fail2ban-testimage
+    network_mode: bridge
+    environment:
+      - TZ=America/Chicago
+      - HOST_CONTAINERNAME=sftp-fail2ban-testimage
+      - AUTO_UPDATE=true
+      - PUID=0
+      - PGID=0
+    ports:
+      - "60022:22"
+    volumes:
+      - /mnt/user/:/home/admin/sftp:rw
+      - /mnt/user/appdata/sftp-fail2ban:/config:rw
+    hostname: sftp
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    image: bmmbmm01/sftp:latest
