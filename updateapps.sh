@@ -19,14 +19,20 @@ update_package() {
         echo "[INFO] Current version of $package_name: $current_version"
     fi
 
-    # Fetch the latest version information from the package base URL
+    # Fetch the latest version information from the package base URL with timeout and error handling
     echo "[INFO] Fetching latest version information for $package_name..."
+    local curl_output
+    if ! curl_output=$(curl -sSL --max-time 10 "$package_base_url"); then
+        echo "[WARN] Failed to fetch package list for $package_name. Network may be down or URL unreachable. Skipping update."
+        return 0
+    fi
+
     local latest_package_info
-    latest_package_info=$(curl -sSL "$package_base_url" | grep -oP "$package_pattern" | sort -V | tail -n 1)
+    latest_package_info=$(echo "$curl_output" | grep -oP "$package_pattern" | sort -V | tail -n 1)
 
     if [[ -z "$latest_package_info" ]]; then
-        echo "[ERROR] Could not retrieve latest version for $package_name. Skipping update."
-        return
+        echo "[ERROR] Could not retrieve latest version for $package_name from package list. Skipping update."
+        return 0
     fi
 
     # Extract version from .deb filename (handles _amd64.deb and _all.deb)
@@ -36,20 +42,23 @@ update_package() {
     local latest_package_url="${package_base_url}${latest_package_info}"
     echo "[INFO] Latest version of $package_name available: $latest_version"
 
-    # Normalize versions for comparison
-    local norm_current_version=${current_version#*:}  # Strip epoch if exists
+    # Normalize versions for comparison (strip epoch)
+    local norm_current_version=${current_version#*:}
 
     # Compare versions and update if a newer version is available or if not currently installed
     if [[ -z "$current_version" ]] || dpkg --compare-versions "$latest_version" gt "$norm_current_version"; then
         echo "[INFO] Newer version detected: $latest_version (current: ${current_version:-none})"
         echo "[INFO] Downloading $package_name version $latest_version..."
-        curl -sSL -o "/tmp/$latest_package_info" "$latest_package_url"
+        if ! curl -sSL --max-time 30 -o "/tmp/$latest_package_info" "$latest_package_url"; then
+            echo "[WARN] Failed to download $package_name package. Skipping installation."
+            return 0
+        fi
 
         echo "[INFO] Installing $package_name version $latest_version..."
         if dpkg -i "/tmp/$latest_package_info"; then
             echo "[INFO] $package_name updated successfully."
         else
-            echo "[ERROR] Failed to install $package_name. You may need to manually resolve dependencies. A container restart may be required."
+            echo "[ERROR] Failed to install $package_name. Manual dependency resolution may be required."
         fi
     else
         echo "[INFO] $package_name is up-to-date (version: $current_version)."
@@ -74,21 +83,25 @@ update_package "openssh-sftp-server" "$openssh_base_url" "$openssh_sftp_pattern"
 update_package "fail2ban" "$fail2ban_base_url" "$fail2ban_pattern" || echo "[WARN] Fail2Ban update failed, continuing..."
 
 # --- Output Current Installed Versions ---
-echo "[INFO] versions of current running:"
+echo "[INFO] Versions of currently running software:"
 echo -n "Fail2Ban: " && fail2ban-client -V 2>/dev/null | head -n1 | sed 's/[^0-9.]*\([0-9.]*\).*/\1/'
 echo -n "OpenSSH client: " && ssh -V 2>&1 | grep -oP 'OpenSSH_\K[^ ]+'
 echo -n "OpenSSH server: " && dpkg-query -W -f='${Version}\n' openssh-server 2>/dev/null
 
-
-#https://forums.unraid.net/topic/189050-support-sftp-fail2ban/#findComment-1545483
 # --- Extra (optional) ---
-# Uncomment to install whois and add additional fail2ban filters
-# echo "Installing whois..."
-# curl -sSL -o /tmp/whois.deb http://archive.ubuntu.com/ubuntu/pool/main/w/whois/whois_5.5.6_amd64.deb
-# dpkg -i /tmp/whois.deb
-#https://ubuntu.pkgs.org/20.04/ubuntu-main-amd64/whois_5.5.6_amd64.deb.html
+#https://forums.unraid.net/topic/189050-support-sftp-fail2ban/#findComment-1545483
 
-# echo "Copying custom fail2ban filters..."
-# cp /config/fail2ban/logwhois.conf /etc/fail2ban/action.d/logwhois.conf
-# cp /config/fail2ban/sshd-cipher-mismatch.conf /etc/fail2ban/filter.d/
-# cp /config/fail2ban/sshd-banner-fail.conf /etc/fail2ban/filter.d/
+#echo "Installing whois..."
+#https://ubuntu.pkgs.org/20.04/ubuntu-main-amd64/whois_5.5.6_amd64.deb.html
+#if curl -sSL --max-time 30 -o /tmp/whois.deb http://archive.ubuntu.com/ubuntu/pool/main/w/whois/whois_5.5.6_amd64.deb; then
+#    set +e
+#    dpkg -i /tmp/whois.deb
+#    set -e
+#else
+#    echo "[WARN] Failed to download whois package."
+#fi
+
+#echo "Copying custom fail2ban filters..."
+#cp /config/fail2ban/logwhois.conf /etc/fail2ban/action.d/logwhois.conf
+#cp /config/fail2ban/sshd-cipher-mismatch.conf /etc/fail2ban/filter.d/
+#cp /config/fail2ban/sshd-banner-fail.conf /etc/fail2ban/filter.d/
