@@ -29,9 +29,9 @@ update_package() {
         return
     fi
 
-    # Extract version from .deb filename (e.g. openssh-server_9.9p1-3ubuntu3.1_amd64.deb → 9.9p1-3ubuntu3.1)
+    # Extract version from .deb filename (handles _amd64.deb and _all.deb)
     local latest_version
-    latest_version=$(echo "$latest_package_info" | sed -E 's/^[^_]+_([^_]+)_.*$/\1/')
+    latest_version=$(echo "$latest_package_info" | sed -E 's/^[^_]+_([^_]+)_(amd64|all)\.deb$/\1/')
 
     local latest_package_url="${package_base_url}${latest_package_info}"
     echo "[INFO] Latest version of $package_name available: $latest_version"
@@ -79,18 +79,16 @@ echo -n "Fail2Ban: " && fail2ban-client -V 2>/dev/null | head -n1 | sed 's/[^0-9
 echo -n "OpenSSH client: " && ssh -V 2>&1 | grep -oP 'OpenSSH_\K[^ ]+'
 echo -n "OpenSSH server: " && dpkg-query -W -f='${Version}\n' openssh-server 2>/dev/null
 
-#Extra
-#Extra run docker env custum and uncomment... must have files made befroe docker start!!!...
+
 #https://forums.unraid.net/topic/189050-support-sftp-fail2ban/#findComment-1545483
-#echo "installing whois"
+# --- Extra (optional) ---
+# Uncomment to install whois and add additional fail2ban filters
+# echo "Installing whois..."
+# curl -sSL -o /tmp/whois.deb http://archive.ubuntu.com/ubuntu/pool/main/w/whois/whois_5.5.6_amd64.deb
+# dpkg -i /tmp/whois.deb
 #https://ubuntu.pkgs.org/20.04/ubuntu-main-amd64/whois_5.5.6_amd64.deb.html
-#cd /tmp
-#curl -O http://archive.ubuntu.com/ubuntu/pool/main/w/whois/whois_5.5.6_amd64.deb
-#dpkg -i whois_5.5.6_amd64.deb
-#
-#echo copy extra custom option
-#cp /config/fail2ban/logwhois.conf /etc/fail2ban/action.d/logwhois.conf
-#
-#echo copy extra filter options
-#cp /config/fail2ban/sshd-cipher-mismatch.conf /etc/fail2ban/filter.d/
-#cp /config/fail2ban/sshd-banner-fail.conf /etc/fail2ban/filter.d/
+
+# echo "Copying custom fail2ban filters..."
+# cp /config/fail2ban/logwhois.conf /etc/fail2ban/action.d/logwhois.conf
+# cp /config/fail2ban/sshd-cipher-mismatch.conf /etc/fail2ban/filter.d/
+# cp /config/fail2ban/sshd-banner-fail.conf /etc/fail2ban/filter.d/
