@@ -19,10 +19,7 @@ https://answers.launchpad.net/ubuntu/noble/+package/syslog-ng
 
 
 Current Image version as seen in docker log
-[INFO] versions of current running:
+[INFO] Versions of currently running software:
 Fail2Ban: 1.1.0
 OpenSSH client: 9.9p1
 OpenSSH server: 1:9.9p1-3ubuntu3
-
-#Docker works in unraid but may casue docker loops in other OS...
-WIP
