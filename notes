@@ -1,4 +1,4 @@
-as of 4/12/25
+as of 7/3/25
 
 Base docker image:
 phusion/baseimage:noble-1.0.2
@@ -10,7 +10,7 @@ openssh: openssh 9.9p1
 https://launchpad.net/ubuntu/noble/+package/openssh-server
 https://archive.ubuntu.com/ubuntu/pool/main/o/openssh/
 
-fail2ban: 1.0.2
+fail2ban: 1.1.0-8
 https://launchpad.net/ubuntu/noble/+package/fail2ban
 https://archive.ubuntu.com/ubuntu/pool/universe/f/fail2ban/
 
@@ -20,6 +20,9 @@ https://answers.launchpad.net/ubuntu/noble/+package/syslog-ng
 
 Current Image version as seen in docker log
 [INFO] versions of current running:
-Fail2Ban: 1.0.2
+Fail2Ban: 1.1.0
 OpenSSH client: 9.9p1
 OpenSSH server: 1:9.9p1-3ubuntu3
+
+#Docker works in unraid but may casue docker loops in other OS...
+WIP
