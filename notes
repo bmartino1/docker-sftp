@@ -23,3 +23,6 @@ Current Image version as seen in docker log
 Fail2Ban: 1.1.0
 OpenSSH client: 9.9p1
 OpenSSH server: 1:9.9p1-3ubuntu3
+
+WIP - Openssh came out with a version 10 that requires higher glibc packages...
+Waiting on phusion base to update for openssh v10 update scripts...
