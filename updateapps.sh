@@ -1,6 +1,37 @@
 #!/bin/bash
 set -e
 
+# ADDED: make apt noninteractive & allow selecting a newer suite containing OpenSSH v10 + libc6
+export DEBIAN_FRONTEND=noninteractive
+APT_TARGET_SUITE="${APT_TARGET_SUITE:-plucky}"   # set via Docker build ARG or container env if desired
+
+# ADDED: targeted apt install for a given package from ${APT_TARGET_SUITE}, pulling deps (e.g., libc6)
+apt_targeted_install() {
+    local pkg="$1"
+    echo "[INFO] Installing ${pkg} from suite '${APT_TARGET_SUITE}' via apt (with dependencies)..."
+    apt-get update -qq
+    if apt-get install -y --no-install-recommends -t "${APT_TARGET_SUITE}" "${pkg}"; then
+        echo "[INFO] ${pkg} installed from ${APT_TARGET_SUITE}."
+        return 0
+    fi
+    echo "[WARN] Failed to install ${pkg} from ${APT_TARGET_SUITE}."
+    return 1
+}
+
+# ADDED: helper to install a local .deb and resolve deps from configured repos
+apt_install_local_deb() {
+    local deb_path="$1"
+    echo "[INFO] Attempting to resolve dependencies via apt for $(basename "$deb_path")..."
+    if apt-get update -qq; then
+        if apt-get install -y --no-install-recommends "$deb_path"; then
+            echo "[INFO] apt successfully installed $(basename "$deb_path") with dependencies."
+            return 0
+        fi
+    fi
+    echo "[ERROR] apt failed to install $(basename "$deb_path") with dependencies."
+    return 1
+}
+
 # Function to check and update a package using curl and dpkg
 update_package() {
     local package_name=$1
@@ -48,17 +79,33 @@ update_package() {
     # Compare versions and update if a newer version is available or if not currently installed
     if [[ -z "$current_version" ]] || dpkg --compare-versions "$latest_version" gt "$norm_current_version"; then
         echo "[INFO] Newer version detected: $latest_version (current: ${current_version:-none})"
+
+        # Prefer apt from the newer suite (pulls libc6 etc.). If it works, we're done.
+        if [[ "$package_name" =~ ^openssh-(client|server|sftp-server)$ ]]; then
+            if apt_targeted_install "$package_name"; then
+                return 0
+            else
+                echo "[WARN] Targeted apt install for $package_name failed; falling back to direct .deb download."
+            fi
+        fi
+
         echo "[INFO] Downloading $package_name version $latest_version..."
-        if ! curl -sSL --max-time 30 -o "/tmp/$latest_package_info" "$latest_package_url"; then
+        local tmp_deb="/tmp/$latest_package_info"
+        if ! curl -sSL --max-time 30 -o "$tmp_deb" "$latest_package_url"; then
             echo "[WARN] Failed to download $package_name package. Skipping installation."
             return 0
         fi
 
         echo "[INFO] Installing $package_name version $latest_version..."
-        if dpkg -i "/tmp/$latest_package_info"; then
+        if dpkg -i "$tmp_deb"; then
             echo "[INFO] $package_name updated successfully."
         else
-            echo "[ERROR] Failed to install $package_name. Manual dependency resolution may be required."
+            echo "[WARN] dpkg reported missing dependencies for $package_name."
+            if apt_install_local_deb "$tmp_deb"; then
+                echo "[INFO] $package_name updated successfully (after resolving dependencies)."
+            else
+                echo "[ERROR] Failed to install $package_name. Manual dependency resolution may be required."
+            fi
         fi
     else
         echo "[INFO] $package_name is up-to-date (version: $current_version)."
@@ -75,8 +122,9 @@ fail2ban_base_url="http://archive.ubuntu.com/ubuntu/pool/universe/f/fail2ban/"
 fail2ban_pattern="fail2ban_[0-9]+\.[0-9]+\.[0-9]+-[0-9]+_all\.deb"
 
 # --- Check and update OpenSSH packages ---
-update_package "openssh-server" "$openssh_base_url" "$openssh_server_pattern" || echo "[WARN] OpenSSH server update failed, continuing..."
+# Install in order: client → server → sftp (server depends on exact same-version client)
 update_package "openssh-client" "$openssh_base_url" "$openssh_client_pattern" || echo "[WARN] OpenSSH client update failed, continuing..."
+update_package "openssh-server" "$openssh_base_url" "$openssh_server_pattern" || echo "[WARN] OpenSSH server update failed, continuing..."
 update_package "openssh-sftp-server" "$openssh_base_url" "$openssh_sftp_pattern" || echo "[WARN] OpenSSH SFTP server update failed, continuing..."
 
 # --- Check and update Fail2Ban ---
@@ -89,7 +137,7 @@ echo -n "OpenSSH client: " && ssh -V 2>&1 | grep -oP 'OpenSSH_\K[^ ]+'
 echo -n "OpenSSH server: " && dpkg-query -W -f='${Version}\n' openssh-server 2>/dev/null
 
 # --- Extra (optional) ---
-#https://forums.unraid.net/topic/189050-support-sftp-fail2ban/#findComment-1545483
+#https://forums/unraid.net/topic/189050-support-sftp-fail2ban/#findComment-1545483
 
 #echo "Installing whois..."
 #https://ubuntu.pkgs.org/20.04/ubuntu-main-amd64/whois_5.5.6_amd64.deb.html
