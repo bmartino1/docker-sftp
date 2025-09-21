@@ -30,10 +30,13 @@ RUN mkdir -p /etc/default/sshd \
 # Install updated packages and setup
 # - OpenSSH needs /var/run/sshd to run
 # - Remove generic host keys; entrypoint generates unique keys
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        openssh-server \
-        openssh-sftp-server \
+# - NOTE: We intentionally DO NOT pre-install openssh-* here. The update script will install v10
+#         from a newer Ubuntu suite so that dependencies (e.g., libc6) are satisfied cleanly.
+ARG APT_TARGET_SUITE=plucky   # choose a suite that contains OpenSSH v10 + required libc6 (e.g., oracular, plucky)
+ENV DEBIAN_FRONTEND=noninteractive
+RUN set -e; \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
         fail2ban \
         iptables \
         syslog-ng \
@@ -45,6 +48,18 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir -p /var/run/sshd /var/run/fail2ban && \
     rm -f /etc/ssh/ssh_host_*key*
+
+# Add a newer Ubuntu suite as an extra repo and pin ONLY the packages we want from it
+# This allows pulling OpenSSH v10 + libc6 from ${APT_TARGET_SUITE} without upgrading the whole base image.
+RUN set -e; \
+    echo "deb http://archive.ubuntu.com/ubuntu ${APT_TARGET_SUITE} main universe multiverse" > /etc/apt/sources.list.d/${APT_TARGET_SUITE}.list; \
+    echo "deb http://archive.ubuntu.com/ubuntu ${APT_TARGET_SUITE}-updates main universe multiverse" >> /etc/apt/sources.list.d/${APT_TARGET_SUITE}.list; \
+    echo "deb http://security.ubuntu.com/ubuntu ${APT_TARGET_SUITE}-security main universe multiverse" >> /etc/apt/sources.list.d/${APT_TARGET_SUITE}.list; \
+    mkdir -p /etc/apt/preferences.d; \
+    printf "Package: openssh-client\nPin: release n=%s\nPin-Priority: 990\n\n" "$APT_TARGET_SUITE" > /etc/apt/preferences.d/openssh-10.pref; \
+    printf "Package: openssh-server\nPin: release n=%s\nPin-Priority: 990\n\n" "$APT_TARGET_SUITE" >> /etc/apt/preferences.d/openssh-10.pref; \
+    printf "Package: openssh-sftp-server\nPin: release n=%s\nPin-Priority: 990\n\n" "$APT_TARGET_SUITE" >> /etc/apt/preferences.d/openssh-10.pref; \
+    printf "Package: libc6\nPin: release n=%s\nPin-Priority: 990\n" "$APT_TARGET_SUITE" >> /etc/apt/preferences.d/openssh-10.pref
 
 #Set TZ for date and time fix for Build date and logs.
 ENV TZ=America/Chicago
