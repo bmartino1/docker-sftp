@@ -1,3 +1,6 @@
+#Public Archive Please use updated project:
+https://github.com/bmartino1/sftp2
+
 [preview]: https://raw.githubusercontent.com/MarkusMcNugen/docker-templates/master/sftp/SFTP.png "SFTP"
 
 ![alt text][preview]
